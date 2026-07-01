@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen } from '../../helpers/test-utils'
 import { usePathname } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 
@@ -46,9 +46,8 @@ describe('Navbar', () => {
     
     render(<Navbar />)
     
-    expect(screen.getByText('WC Predictor')).toBeInTheDocument()
-    expect(screen.getByText('FIFA 2026™')).toBeInTheDocument()
-    expect(screen.getByText('🏆')).toBeInTheDocument()
+    expect(screen.getByText('Boom FIFA World Cup 2026™ Predictor')).toBeInTheDocument()
+    expect(screen.getByAltText('FIFA World Cup 2026')).toBeInTheDocument()
   })
 
   it('handles nested routes correctly', () => {

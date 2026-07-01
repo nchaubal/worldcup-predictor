@@ -197,8 +197,14 @@ function Col({ matches, picks, onPick, showAI }: {
 // Main page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function BracketPage() {
-  const { setKnockoutPrediction } = useTournament();
+  const { setKnockoutPrediction, knockoutPredictions } = useTournament();
   const [picks, setPicks]         = useState<Record<string, string>>({});
+
+  // knockoutPredictions loads asynchronously from Supabase after auth
+  // resolves, so seed local picks once they arrive (e.g. on page reload).
+  useEffect(() => {
+    setPicks((prev) => ({ ...knockoutPredictions, ...prev }));
+  }, [knockoutPredictions]);
   const [history, setHistory]     = useState<Record<string, string>[]>([]);
   const [scale, setScale]           = useState(1);
   const [bracketH, setBracketH]     = useState(0);

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
@@ -54,11 +55,21 @@ export default function HomePage() {
               🔴 Round of 32 Underway · Jun 28 – Jul 4
             </Badge>
 
-            <h1 className="text-5xl font-black tracking-tight sm:text-7xl leading-none">
-              FIFA World Cup<br />
-              <span className="text-primary">2026™</span>{" "}
-              <span className="text-foreground/60 font-light">Predictor</span>
-            </h1>
+            <div className="flex items-center gap-5 sm:gap-8">
+              <Image
+                src="/2026_FIFA_World_Cup_emblem.svg.webp"
+                alt="FIFA World Cup 2026"
+                width={960}
+                height={1482}
+                priority
+                className="h-28 w-auto sm:h-40 rounded-xl shrink-0"
+              />
+              <h1 className="text-left text-4xl font-black tracking-tight sm:text-6xl leading-none">
+                Boom FIFA World Cup<br />
+                <span className="text-primary">2026™</span>{" "}
+                <span className="text-foreground/60 font-light">Predictor</span>
+              </h1>
+            </div>
 
             <p className="max-w-xl text-lg text-muted-foreground leading-relaxed">
               48 teams. 104 matches. 3 nations hosting. Predict every result, build your bracket, and compete with friends.

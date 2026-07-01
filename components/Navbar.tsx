@@ -1,8 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Trophy, LayoutGrid, GitBranch, Users, User } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Trophy, LayoutGrid, GitBranch, Users, User, LogOut } from "lucide-react";
+import { useTournament } from "@/context/TournamentContext";
+import { Button } from "@/components/ui/button";
 
 const NAV_LINKS = [
   { href: "/",        label: "Home",    icon: Trophy },
@@ -14,19 +17,29 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { authUser, authLoading, currentUser, logout } = useTournament();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/");
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-card/90 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
 
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/30 text-xl group-hover:bg-primary/20 transition-colors">
-              🏆
-            </div>
-            <div className="hidden sm:block">
-              <div className="text-sm font-bold leading-none text-foreground">WC Predictor</div>
-              <div className="text-xs text-primary font-semibold leading-none mt-0.5">FIFA 2026™</div>
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <Image
+              src="/2026_FIFA_World_Cup_emblem.svg.webp"
+              alt="FIFA World Cup 2026"
+              width={960}
+              height={1482}
+              className="h-9 w-auto rounded-md"
+            />
+            <div className="hidden sm:block text-sm font-bold leading-none text-foreground whitespace-nowrap">
+              Boom FIFA World Cup 2026™ Predictor
             </div>
           </Link>
 
@@ -52,6 +65,29 @@ export default function Navbar() {
               );
             })}
           </nav>
+
+          <div className="flex items-center gap-2">
+            {authLoading ? null : authUser ? (
+              <>
+                <span className="hidden sm:block text-sm text-muted-foreground">
+                  {currentUser.avatar} {currentUser.userName}
+                </span>
+                <Button type="button" variant="ghost" size="sm" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden md:block">Log out</span>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm">Log in</Button>
+                </Link>
+                <Link href="/signup">
+                  <Button size="sm">Sign up</Button>
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>
