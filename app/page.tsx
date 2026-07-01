@@ -36,9 +36,12 @@ export default function HomePage() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const { matches: footballMatches, fetchWorldCupMatches } = useFootballData();
 
-  // Fetch ALL World Cup matches when component mounts so standings/bracket populate
+  // Fetch ALL World Cup matches on mount (and refresh every 60s) so standings,
+  // completed results, and live matches stay current.
   useEffect(() => {
     fetchWorldCupMatches();
+    const interval = setInterval(fetchWorldCupMatches, 60000);
+    return () => clearInterval(interval);
   }, [fetchWorldCupMatches]);
   
   // Use dynamic sync system to get real-time match data

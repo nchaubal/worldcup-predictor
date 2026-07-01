@@ -1,5 +1,5 @@
 // Hook for using Football Data.org API
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { footballDataApi, FootballDataMatch } from '@/lib/football-data-api';
 
 export interface FootballDataMatchWithDetails extends FootballDataMatch {
@@ -131,19 +131,9 @@ export const useFootballData = () => {
     }
   }, []);
 
-  // Auto-refresh live matches every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchLiveMatches();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [fetchLiveMatches]);
-
-  // Initial load of today's matches
-  useEffect(() => {
-    fetchTodayMatches();
-  }, [fetchTodayMatches]);
+  // NOTE: This hook does NOT auto-fetch. Each consumer decides what to load
+  // (e.g. fetchWorldCupMatches for all matches, fetchLiveMatches for the live
+  // widget) so that one component's fetch does not overwrite another's data.
 
   return {
     matches,

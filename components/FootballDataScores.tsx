@@ -18,11 +18,11 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
   const { matches, loading, error, fetchLiveMatches, fetchTodayMatches } = useFootballData();
 
   React.useEffect(() => {
-    if (showOnlyLive) {
-      fetchLiveMatches();
-    } else {
-      fetchTodayMatches();
-    }
+    const load = () => (showOnlyLive ? fetchLiveMatches() : fetchTodayMatches());
+    load();
+    // Refresh periodically so live scores stay current
+    const interval = setInterval(load, 60000);
+    return () => clearInterval(interval);
   }, [showOnlyLive, fetchLiveMatches, fetchTodayMatches]);
 
   if (loading) {
