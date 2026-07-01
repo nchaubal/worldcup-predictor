@@ -91,8 +91,8 @@ class FIFAApiService {
           score: 0
         },
         competition: 'FIFA World Cup 2026',
-        matchDate: new Date().toISOString(),
-        status: 'LIVE',
+        matchDate: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+        status: 'FULL_TIME',
         venue: 'State Farm Stadium',
         city: 'Glendale, Arizona, USA',
         group: 'Group A',

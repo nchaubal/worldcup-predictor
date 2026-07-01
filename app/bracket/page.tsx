@@ -277,15 +277,18 @@ export default function BracketPage() {
     
     // If live FIFA match exists, use its data
     if (liveFIFAMatch) {
+      const isCompleted = liveFIFAMatch.status === 'FULL_TIME';
+      const winnerId = isCompleted ? (liveFIFAMatch.homeTeam.score! > liveFIFAMatch.awayTeam.score! ? m.homeTeamId : m.awayTeamId) : null;
+      
       return { 
         id: m.id, 
         teamAId: m.homeTeamId, 
         teamBId: m.awayTeamId,
-        winnerId: null, // Live matches have no winner yet
+        winnerId: winnerId, // Set winner for completed matches
         scoreA: liveFIFAMatch.homeTeam.score, 
         scoreB: liveFIFAMatch.awayTeam.score,
         pens: undefined, 
-        status: 'live', 
+        status: isCompleted ? 'completed' : 'live', 
         venue: `${liveFIFAMatch.venue}, ${liveFIFAMatch.city}` 
       };
     }
