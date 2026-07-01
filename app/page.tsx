@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LayoutGrid, GitBranch, Users, MapPin, CheckCircle2, Clock, Radio } from "lucide-react";
 import { TEAMS, GROUPS, GROUP_STANDINGS, R32_MATCHES, getTeamById } from "@/lib/tournament-data";
+import { syncTournamentWithFIFA, getLiveTournamentMatches, getCompletedTournamentMatches, getUpcomingTournamentMatches } from "@/lib/tournament-sync";
 import { FIFAScores } from "@/components/FIFAScores";
 import { useFIFAScores } from "@/hooks/useFIFAScores";
 
@@ -36,9 +37,11 @@ export default function HomePage() {
   const { matches: fifaMatches, getLiveMatches } = useFIFAScores();
   const liveFIFAMatches = getLiveMatches();
   
-  const completedMatches  = R32_MATCHES.filter((m) => m.status === "completed");
-  const liveMatches       = R32_MATCHES.filter((m) => m.status === "live");
-  const upcomingMatches   = R32_MATCHES.filter((m) => m.status === "upcoming");
+  // Use dynamic sync system to get real-time match data
+  const syncedTournament = syncTournamentWithFIFA(fifaMatches);
+  const completedMatches = getCompletedTournamentMatches(fifaMatches).filter(m => m.id.startsWith('r32_'));
+  const liveMatches = getLiveTournamentMatches(fifaMatches).filter(m => m.id.startsWith('r32_'));
+  const upcomingMatches = getUpcomingTournamentMatches(fifaMatches).filter(m => m.id.startsWith('r32_'));
   const featuredGroups    = ["I", "J", "C", "L"]; // France, Argentina, Brazil, England groups
 
   return (

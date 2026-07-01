@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 import { TEAMS, Team, R32_MATCHES } from "@/lib/tournament-data";
+import { syncTournamentWithFIFA } from "@/lib/tournament-sync";
 import { predictMatch } from "@/lib/ai-predictor";
 import { useFIFAScores } from "@/hooks/useFIFAScores";
 import { GitBranch, Brain, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo } from "lucide-react";
@@ -263,47 +264,37 @@ export default function BracketPage() {
     return m?.winner ?? picks[matchId] ?? null;
   };
 
-  // R32 → MatchDef lookup by id
+  // R32 → MatchDef lookup by id with dynamic sync
   const r32ById = (id: string): MatchDef => {
-    const m = R32_MATCHES.find(x => x.id === id)!;
+    const syncedTournament = syncTournamentWithFIFA(fifaMatches);
+    const syncedMatch = syncedTournament.r32.find(m => m.id === id);
     
-    // Check if this match has live FIFA data
-    const homeTeam = TEAMS.find(t => t.id === m.homeTeamId);
-    const awayTeam = TEAMS.find(t => t.id === m.awayTeamId);
-    const liveFIFAMatch = liveFIFAMatches.find(fifaMatch => 
-      (fifaMatch.homeTeam.name === homeTeam?.name && fifaMatch.awayTeam.name === awayTeam?.name) ||
-      (fifaMatch.homeTeam.name === awayTeam?.name && fifaMatch.awayTeam.name === homeTeam?.name)
-    );
-    
-    // If live FIFA match exists, use its data
-    if (liveFIFAMatch) {
-      const isCompleted = liveFIFAMatch.status === 'FULL_TIME';
-      const winnerId = isCompleted ? (liveFIFAMatch.homeTeam.score! > liveFIFAMatch.awayTeam.score! ? m.homeTeamId : m.awayTeamId) : null;
-      
+    if (!syncedMatch) {
+      // Fallback to original data if sync fails
+      const m = R32_MATCHES.find(x => x.id === id)!;
       return { 
         id: m.id, 
         teamAId: m.homeTeamId, 
         teamBId: m.awayTeamId,
-        winnerId: winnerId, // Set winner for completed matches
-        scoreA: liveFIFAMatch.homeTeam.score, 
-        scoreB: liveFIFAMatch.awayTeam.score,
-        pens: undefined, 
-        status: isCompleted ? 'completed' : 'live', 
-        venue: `${liveFIFAMatch.venue}, ${liveFIFAMatch.city}` 
+        winnerId: m.winner ?? null, 
+        scoreA: m.homeScore, 
+        scoreB: m.awayScore,
+        pens: m.pens, 
+        status: m.status, 
+        venue: m.venue 
       };
     }
     
-    // Otherwise use original data
     return { 
-      id: m.id, 
-      teamAId: m.homeTeamId, 
-      teamBId: m.awayTeamId,
-      winnerId: m.winner ?? null, 
-      scoreA: m.homeScore, 
-      scoreB: m.awayScore,
-      pens: m.pens, 
-      status: m.status, 
-      venue: m.venue 
+      id: syncedMatch.id, 
+      teamAId: syncedMatch.homeTeamId, 
+      teamBId: syncedMatch.awayTeamId,
+      winnerId: syncedMatch.winner ?? null, 
+      scoreA: syncedMatch.homeScore, 
+      scoreB: syncedMatch.awayScore,
+      pens: syncedMatch.pens, 
+      status: syncedMatch.status, 
+      venue: syncedMatch.venue 
     };
   };
 

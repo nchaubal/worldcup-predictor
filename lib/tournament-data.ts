@@ -251,7 +251,7 @@ export const R32_MATCHES: R32Match[] = [
   { id: "r32_5",  homeTeamId: "fra", awayTeamId: "swe", date: "Tue Jun 30", venue: "New Jersey",   homeScore: 3, awayScore: 0, winner: "fra", status: "completed" },
   { id: "r32_6",  homeTeamId: "civ", awayTeamId: "nor", date: "Tue Jun 30", venue: "Arlington",    homeScore: 1, awayScore: 2, winner: "nor", status: "completed" },
   // Today / Upcoming
-  { id: "r32_7",  homeTeamId: "mex", awayTeamId: "ecu", date: "Wed Jul 1",  venue: "Mexico City",  homeScore: 2, awayScore: 0, winner: "mex", status: "completed" },
+  { id: "r32_7",  homeTeamId: "mex", awayTeamId: "ecu", date: "Wed Jul 1",  venue: "Mexico City",  status: "live" },
   { id: "r32_8",  homeTeamId: "eng", awayTeamId: "cod", date: "Wed Jul 1",  venue: "Atlanta",      status: "upcoming" },
   { id: "r32_9",  homeTeamId: "bel", awayTeamId: "sen", date: "Wed Jul 1",  venue: "Seattle",      status: "upcoming" },
   { id: "r32_10", homeTeamId: "usa", awayTeamId: "bih", date: "Thu Jul 2",  venue: "Santa Clara",  status: "upcoming" },
