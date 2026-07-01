@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,8 +16,13 @@ const THIRD_PLACE_GROUPS = new Set(["B", "D", "E", "F", "I", "J", "K", "L"]);
 
 export default function PredictPage() {
   const [activeGroup, setActiveGroup] = useState("A");
-  const { matches: footballMatches } = useFootballData();
+  const { matches: footballMatches, fetchTodayMatches } = useFootballData();
   const apiGroupStandings = getGroupStandingsFromAPI(footballMatches);
+
+  // Fetch World Cup matches data when component mounts
+  useEffect(() => {
+    fetchTodayMatches();
+  }, [fetchTodayMatches]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">

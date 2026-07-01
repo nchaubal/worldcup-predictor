@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +34,12 @@ const statusLabel = {
 
 export default function HomePage() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const { matches: footballMatches, fetchLiveMatches } = useFootballData();
+  const { matches: footballMatches, fetchLiveMatches, fetchTodayMatches } = useFootballData();
+
+  // Fetch World Cup matches data when component mounts
+  useEffect(() => {
+    fetchTodayMatches();
+  }, [fetchTodayMatches]);
   
   // Use dynamic sync system to get real-time match data
   const syncedTournament = syncTournamentWithFootballData(footballMatches);
