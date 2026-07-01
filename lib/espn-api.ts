@@ -41,7 +41,7 @@ export interface ESPNResponse {
 }
 
 class ESPNScoreService {
-  private baseUrl = 'https://site.web.api.espn.com/apis/site/v2/sports/soccer/ifa/world-cup';
+  private baseUrl = 'https://site.web.api.espn.com/apis/site/v2/sports/soccer';
   private pollInterval: NodeJS.Timeout | null = null;
   private subscribers: Set<(matches: ESPNMatch[]) => void> = new Set();
 
@@ -56,18 +56,52 @@ class ESPNScoreService {
     this.subscribers.forEach(callback => callback(matches));
   }
 
-  // Fetch live matches
+  // Fetch live matches from multiple competitions
   async fetchLiveMatches(): Promise<ESPNMatch[]> {
     try {
-      // ESPN's free public API endpoint
-      const response = await fetch(`${this.baseUrl}/scoreboard`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Fetch from multiple soccer competitions to get all live matches
+      const competitions = [
+        'world-cup',      // World Cup
+        'copa-america',   // Copa América (Mexico vs Ecuador likely here)
+        'uefa.euro',      // Euro Championship
+        'uefa.champions', // Champions League
+        'concacaf.gold-cup', // Gold Cup
+        'fifa.qualification.concacaf', // CONCACAF Qualifiers
+        'fifa.qualification.conmebol', // CONMEBOL Qualifiers
+        'mls',            // Major League Soccer
+        'liga-mx',        // Liga MX
+        'eng.1',          // Premier League
+        'esp.1',          // La Liga
+        'ita.1',          // Serie A
+        'ger.1',          // Bundesliga
+        'fra.1',          // Ligue 1
+      ];
+
+      const allMatches: ESPNMatch[] = [];
+
+      // Fetch from each competition
+      for (const competition of competitions) {
+        try {
+          const response = await fetch(`${this.baseUrl}/${competition}/scoreboard`);
+          
+          if (response.ok) {
+            const data: ESPNResponse = await response.json();
+            if (data.events && data.events.length > 0) {
+              allMatches.push(...data.events);
+            }
+          }
+        } catch (err) {
+          // Continue with other competitions if one fails
+          console.log(`Failed to fetch ${competition}:`, err);
+        }
       }
 
-      const data: ESPNResponse = await response.json();
-      return data.events || [];
+      // Remove duplicates by match ID
+      const uniqueMatches = allMatches.filter((match, index, self) =>
+        index === self.findIndex((m) => m.id === match.id)
+      );
+
+      return uniqueMatches;
     } catch (error) {
       console.error('Error fetching ESPN matches:', error);
       return [];
@@ -120,7 +154,7 @@ class ESPNScoreService {
     this.notifySubscribers(matches);
   }
 
-  // Get all World Cup fixtures
+  // Get all soccer fixtures
   async getWorldCupFixtures(): Promise<ESPNMatch[]> {
     return this.fetchLiveMatches();
   }
