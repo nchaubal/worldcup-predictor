@@ -119,27 +119,83 @@ class FIFAApiService {
         stage: 'Group Stage'
       },
       {
-        id: 'arg-bol-2026',
+        id: 'esp-nga-2026',
         homeTeam: {
-          name: 'Argentina',
-          code: 'ARG',
-          score: 3
+          name: 'Spain',
+          code: 'ESP',
+          score: 1
         },
         awayTeam: {
-          name: 'Bolivia',
-          code: 'BOL',
+          name: 'Nigeria',
+          code: 'NGA',
           score: 1
         },
         competition: 'FIFA World Cup 2026',
-        matchDate: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+        matchDate: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
         status: 'FULL_TIME',
-        venue: 'MetLife Stadium',
-        city: 'East Rutherford, New Jersey, USA',
-        group: 'Group B',
+        venue: 'Lumen Field',
+        city: 'Seattle, Washington, USA',
+        group: 'Group D',
         stage: 'Group Stage'
       },
       {
-        id: 'bra-cri-2026',
+        id: 'ger-jpn-2026',
+        homeTeam: {
+          name: 'Germany',
+          code: 'GER',
+          score: 3
+        },
+        awayTeam: {
+          name: 'Japan',
+          code: 'JPN',
+          score: 2
+        },
+        competition: 'FIFA World Cup 2026',
+        matchDate: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+        status: 'FULL_TIME',
+        venue: 'AT&T Stadium',
+        city: 'Arlington, Texas, USA',
+        group: 'Group E',
+        stage: 'Group Stage'
+      },
+      {
+        id: 'fra-aus-2026',
+        homeTeam: {
+          name: 'France',
+          code: 'FRA'
+        },
+        awayTeam: {
+          name: 'Australia',
+          code: 'AUS'
+        },
+        competition: 'FIFA World Cup 2026',
+        matchDate: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        status: 'UPCOMING',
+        venue: 'MetLife Stadium',
+        city: 'East Rutherford, New Jersey, USA',
+        group: 'Group D',
+        stage: 'Group Stage'
+      },
+      {
+        id: 'eng-den-2026',
+        homeTeam: {
+          name: 'England',
+          code: 'ENG'
+        },
+        awayTeam: {
+          name: 'Denmark',
+          code: 'DEN'
+        },
+        competition: 'FIFA World Cup 2026',
+        matchDate: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+        status: 'UPCOMING',
+        venue: 'Levi\'s Stadium',
+        city: 'Santa Clara, California, USA',
+        group: 'Group C',
+        stage: 'Group Stage'
+      },
+      {
+        id: 'bra-crc-2026',
         homeTeam: {
           name: 'Brazil',
           code: 'BRA'
@@ -149,29 +205,29 @@ class FIFAApiService {
           code: 'CRC'
         },
         competition: 'FIFA World Cup 2026',
-        matchDate: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+        matchDate: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
         status: 'UPCOMING',
-        venue: 'Levi\'s Stadium',
-        city: 'Santa Clara, California, USA',
+        venue: 'NRG Stadium',
+        city: 'Houston, Texas, USA',
         group: 'Group G',
         stage: 'Group Stage'
       },
       {
-        id: 'uru-pan-2026',
+        id: 'arg-per-2026',
         homeTeam: {
-          name: 'Uruguay',
-          code: 'URU'
+          name: 'Argentina',
+          code: 'ARG'
         },
         awayTeam: {
-          name: 'Panama',
-          code: 'PAN'
+          name: 'Peru',
+          code: 'PER'
         },
         competition: 'FIFA World Cup 2026',
-        matchDate: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
+        matchDate: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
         status: 'UPCOMING',
-        venue: 'NRG Stadium',
-        city: 'Houston, Texas, USA',
-        group: 'Group C',
+        venue: 'Hard Rock Stadium',
+        city: 'Miami Gardens, Florida, USA',
+        group: 'Group B',
         stage: 'Group Stage'
       }
     ];
