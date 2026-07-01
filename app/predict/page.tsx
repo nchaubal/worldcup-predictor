@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GROUPS, GROUP_STANDINGS, getTeamById } from "@/lib/tournament-data";
+import { GROUPS, GROUP_STANDINGS, getTeamById, getTeamByName } from "@/lib/tournament-data";
 import { useFootballData } from "@/hooks/useFootballData";
 import { getGroupStandingsFromAPI } from "@/lib/football-data-sync";
 import { LayoutGrid, ChevronRight } from "lucide-react";
@@ -74,7 +74,7 @@ export default function PredictPage() {
                     <CardTitle className="text-base font-bold">Group {g}</CardTitle>
                     <div className="flex gap-1">
                       {standings.map((s) => {
-                        const t = getTeamById(s.name) || { name: s.name, flag: '🏳️', id: s.name };
+                        const t = getTeamByName(s.name) || { name: s.name, flag: '🏳️', id: s.name };
                         return <span key={s.name} className="text-xl" title={t.name}>{t.flag}</span>;
                       })}
                     </div>
@@ -98,7 +98,7 @@ export default function PredictPage() {
                   </div>
                 ) : (
                   standings.map((s, idx) => {
-                    const team = getTeamById(s.name) || { name: s.name, flag: '🏳️', id: s.name };
+                    const team = getTeamByName(s.name) || { name: s.name, flag: '🏳️', id: s.name };
                     const isWinner   = idx === 0;
                     const isRunner   = idx === 1;
                     const isBest3rd  = idx === 2 && hasBestThird;

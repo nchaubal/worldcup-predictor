@@ -3,7 +3,7 @@
 
 import { FootballDataMatch, footballDataApi } from './football-data-api';
 import { R32_MATCHES } from './tournament-data';
-import { TEAMS } from './tournament-data';
+import { TEAMS, getTeamByName } from './tournament-data';
 
 export interface TournamentMatch {
   id: string;
@@ -27,25 +27,21 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
     return match;
   }
 
-  // Helper function to normalize team names for matching
-  const normalizeTeamName = (name?: string | null): string => {
-    if (!name) return '';
-    return name.toLowerCase().replace(/\s+(islands|republic)/gi, '').trim();
-  };
-
-  const footballMatch = footballMatches.find(fm => 
-    (normalizeTeamName(fm.homeTeam.name) === normalizeTeamName(homeTeam.name) && 
-     normalizeTeamName(fm.awayTeam.name) === normalizeTeamName(awayTeam.name)) ||
-    (normalizeTeamName(fm.homeTeam.name) === normalizeTeamName(awayTeam.name) && 
-     normalizeTeamName(fm.awayTeam.name) === normalizeTeamName(homeTeam.name))
-  );
+  const footballMatch = footballMatches.find(fm => {
+    const fmHomeId = getTeamByName(fm.homeTeam.name)?.id;
+    const fmAwayId = getTeamByName(fm.awayTeam.name)?.id;
+    return (
+      (fmHomeId === homeTeam.id && fmAwayId === awayTeam.id) ||
+      (fmHomeId === awayTeam.id && fmAwayId === homeTeam.id)
+    );
+  });
 
   if (!footballMatch) {
     return match;
   }
 
   // Check if teams are flipped in the API response
-  const teamsFlipped = footballMatch.homeTeam.name !== homeTeam.name;
+  const teamsFlipped = getTeamByName(footballMatch.homeTeam.name)?.id !== homeTeam.id;
   const homeScore = teamsFlipped ? footballMatch.score.fullTime.away : footballMatch.score.fullTime.home;
   const awayScore = teamsFlipped ? footballMatch.score.fullTime.home : footballMatch.score.fullTime.away;
 
@@ -118,20 +114,14 @@ export function getUpcomingTournamentMatches(footballMatches: FootballDataMatch[
 
 // Convert Football Data match to our tournament match format
 export function convertFootballDataToTournamentMatch(footballMatch: FootballDataMatch): TournamentMatch | null {
-  // Helper function to normalize team names for matching
-  const normalizeTeamName = (name?: string | null): string => {
-    if (!name) return '';
-    return name.toLowerCase().replace(/\s+(islands|republic)/gi, '').trim();
-  };
-
   // Knockout matches that aren't set yet have null team names — skip them
   if (!footballMatch.homeTeam?.name || !footballMatch.awayTeam?.name) {
     return null;
   }
 
-  // Find team IDs by team names with normalized matching
-  const homeTeam = TEAMS.find(t => normalizeTeamName(t.name) === normalizeTeamName(footballMatch.homeTeam.name));
-  const awayTeam = TEAMS.find(t => normalizeTeamName(t.name) === normalizeTeamName(footballMatch.awayTeam.name));
+  // Find teams by name with alias-aware matching
+  const homeTeam = getTeamByName(footballMatch.homeTeam.name);
+  const awayTeam = getTeamByName(footballMatch.awayTeam.name);
   
   if (!homeTeam || !awayTeam) {
     return null;

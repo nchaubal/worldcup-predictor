@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LayoutGrid, GitBranch, Users, MapPin, CheckCircle2, Clock, Radio } from "lucide-react";
-import { TEAMS, GROUPS, GROUP_STANDINGS, R32_MATCHES, getTeamById } from "@/lib/tournament-data";
+import { TEAMS, GROUPS, GROUP_STANDINGS, R32_MATCHES, getTeamById, getTeamByName } from "@/lib/tournament-data";
 import { syncTournamentWithFootballData, getLiveTournamentMatches, getCompletedTournamentMatches, getUpcomingTournamentMatches, getGroupStandingsFromAPI } from "@/lib/football-data-sync";
 import { FootballDataScores } from "@/components/FootballDataScores";
 import { useFootballData } from "@/hooks/useFootballData";
@@ -260,7 +260,7 @@ export default function HomePage() {
                       </div>
                     ) : (
                       standings.map((s, idx) => {
-                        const team = getTeamById(s.name) || { name: s.name, flag: '🏳️', id: s.name };
+                        const team = getTeamByName(s.name) || { name: s.name, flag: '🏳️', id: s.name };
                         const qualified = idx < 2 || (grp === "B" && idx === 2) || (grp === "D" && idx === 2) ||
                           (grp === "E" && idx === 2) || (grp === "F" && idx === 2) || (grp === "I" && idx === 2) ||
                           (grp === "J" && idx === 2) || (grp === "K" && idx === 2) || (grp === "L" && idx === 2);

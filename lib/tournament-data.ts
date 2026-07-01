@@ -130,6 +130,36 @@ export function getTeamById(id: string): Team | undefined {
   return TEAMS.find((t) => t.id === id);
 }
 
+// Normalize a team name for matching against external API names
+export function normalizeTeamName(name?: string | null): string {
+  if (!name) return "";
+  return name.toLowerCase().replace(/\s+(islands|republic)/gi, "").trim();
+}
+
+// Map alternate/API spellings to our internal team ids
+const TEAM_NAME_ALIASES: Record<string, string> = {
+  "bosnia-herzegovina": "bih",
+  "bosnia & herz.": "bih",
+  "bosnia and herzegovina": "bih",
+  "congo dr": "cod",
+  "dr congo": "cod",
+  "turkey": "tur",
+  "türkiye": "tur",
+  "united states": "usa",
+  "usa": "usa",
+  "korea republic": "kor",
+  "south korea": "kor",
+};
+
+// Resolve a team by its (possibly external) name, using aliases + normalization
+export function getTeamByName(name?: string | null): Team | undefined {
+  const norm = normalizeTeamName(name);
+  if (!norm) return undefined;
+  const aliasId = TEAM_NAME_ALIASES[norm];
+  if (aliasId) return TEAMS.find((t) => t.id === aliasId);
+  return TEAMS.find((t) => normalizeTeamName(t.name) === norm);
+}
+
 // Group stage is complete – scores are historical results
 export type GroupResult = {
   matchId: string;
