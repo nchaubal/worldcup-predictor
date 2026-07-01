@@ -258,10 +258,11 @@ export default function BracketPage() {
 
   // ── Build match data ──────────────────────────────────────────────────────
 
-  // R32 winner helper
+  // R32 winner helper with dynamic sync
   const r32W = (matchId: string): string | null => {
-    const m = R32_MATCHES.find(x => x.id === matchId);
-    return m?.winner ?? picks[matchId] ?? null;
+    const syncedTournament = syncTournamentWithFIFA(fifaMatches);
+    const syncedMatch = syncedTournament.r32.find(m => m.id === matchId);
+    return syncedMatch?.winner ?? picks[matchId] ?? null;
   };
 
   // R32 → MatchDef lookup by id with dynamic sync
