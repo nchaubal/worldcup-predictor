@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LayoutGrid, GitBranch, Users, MapPin, CheckCircle2, Clock, Radio } from "lucide-react";
 import { TEAMS, GROUPS, GROUP_STANDINGS, R32_MATCHES, getTeamById, getTeamByName } from "@/lib/tournament-data";
-import { syncTournamentWithFootballData, getLiveTournamentMatches, getCompletedTournamentMatches, getUpcomingTournamentMatches, getGroupStandingsFromAPI } from "@/lib/football-data-sync";
+import { syncTournamentWithFootballData, getGroupStandingsFromAPI } from "@/lib/football-data-sync";
 import { FootballDataScores } from "@/components/FootballDataScores";
 import { useFootballData } from "@/hooks/useFootballData";
 
@@ -46,9 +46,6 @@ export default function HomePage() {
   
   // Use dynamic sync system to get real-time match data
   const syncedTournament = syncTournamentWithFootballData(footballMatches);
-  const completedMatches = getCompletedTournamentMatches(footballMatches);
-  const liveMatches = getLiveTournamentMatches(footballMatches);
-  const upcomingMatches = getUpcomingTournamentMatches(footballMatches);
   const apiGroupStandings = getGroupStandingsFromAPI(footballMatches);
   const featuredGroups    = ["I", "J", "C", "L"]; // France, Argentina, Brazil, England groups
 
@@ -164,7 +161,7 @@ export default function HomePage() {
           )}
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[...completedMatches.slice(0, 6), ...upcomingMatches.slice(0, 3)].map((m) => {
+            {syncedTournament.r32.map((m) => {
               // Handle both static matches (with teamId) and API matches (with team names)
               let homeTeam, awayTeam;
               

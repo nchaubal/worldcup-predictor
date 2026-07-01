@@ -18,6 +18,13 @@ export interface TournamentMatch {
   pens?: string;
 }
 
+// football-data.org rolls penalty-shootout goals into fullTime. Subtract the
+// penalties to recover the real on-field (90'/extra-time) score.
+function getOnFieldScore(fullTime?: number | null, penalties?: number | null): number | null {
+  if (fullTime == null) return null;
+  return fullTime - (penalties ?? 0);
+}
+
 export function syncMatchWithFootballData(match: TournamentMatch, footballMatches: FootballDataMatch[]): TournamentMatch {
   // Find matching Football Data match by team names
   const homeTeam = TEAMS.find(t => t.id === match.homeTeamId);
@@ -42,26 +49,31 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
 
   // Check if teams are flipped in the API response
   const teamsFlipped = getTeamByName(footballMatch.homeTeam.name)?.id !== homeTeam.id;
-  const homeScore = teamsFlipped ? footballMatch.score.fullTime.away : footballMatch.score.fullTime.home;
-  const awayScore = teamsFlipped ? footballMatch.score.fullTime.home : footballMatch.score.fullTime.away;
+
+  // The API's fullTime includes penalty-shootout goals; subtract penalties to
+  // get the actual on-field (90'/ET) score.
+  const rawHome = getOnFieldScore(footballMatch.score.fullTime.home, footballMatch.score.penalties?.home);
+  const rawAway = getOnFieldScore(footballMatch.score.fullTime.away, footballMatch.score.penalties?.away);
+  const homeScore = teamsFlipped ? rawAway : rawHome;
+  const awayScore = teamsFlipped ? rawHome : rawAway;
 
   // Determine match status
   const isCompleted = footballMatch.status === 'FINISHED';
   const isLive = footballMatch.status === 'LIVE' || footballMatch.status === 'IN_PLAY' || footballMatch.status === 'PAUSED';
 
-  // Calculate winner for completed matches
+  // Determine winner from the API winner field (accounts for penalty shootouts)
   let winner: string | undefined;
-  if (isCompleted && homeScore !== null && awayScore !== null) {
-    if (homeScore > awayScore) {
-      winner = match.homeTeamId;
-    } else if (awayScore > homeScore) {
-      winner = match.awayTeamId;
+  if (isCompleted) {
+    if (footballMatch.score.winner === 'HOME_TEAM') {
+      winner = teamsFlipped ? match.awayTeamId : match.homeTeamId;
+    } else if (footballMatch.score.winner === 'AWAY_TEAM') {
+      winner = teamsFlipped ? match.homeTeamId : match.awayTeamId;
     }
   }
 
   // Handle penalties
   let pens: string | undefined;
-  if (footballMatch.score.penalties?.home !== null && footballMatch.score.penalties?.away !== null && footballMatch.score.penalties) {
+  if (footballMatch.score.penalties?.home != null && footballMatch.score.penalties?.away != null) {
     const homePenalties = teamsFlipped ? footballMatch.score.penalties.away : footballMatch.score.penalties.home;
     const awayPenalties = teamsFlipped ? footballMatch.score.penalties.home : footballMatch.score.penalties.away;
     pens = `${homePenalties}-${awayPenalties}`;
@@ -131,19 +143,23 @@ export function convertFootballDataToTournamentMatch(footballMatch: FootballData
   const isCompleted = footballMatch.status === 'FINISHED';
   const isLive = footballMatch.status === 'LIVE' || footballMatch.status === 'IN_PLAY' || footballMatch.status === 'PAUSED';
 
-  // Calculate winner for completed matches
+  // On-field score (penalty-shootout goals removed from fullTime)
+  const homeScore = getOnFieldScore(footballMatch.score.fullTime.home, footballMatch.score.penalties?.home);
+  const awayScore = getOnFieldScore(footballMatch.score.fullTime.away, footballMatch.score.penalties?.away);
+
+  // Determine winner from the API winner field (accounts for penalty shootouts)
   let winner: string | undefined;
-  if (isCompleted && footballMatch.score.fullTime.home !== null && footballMatch.score.fullTime.away !== null) {
-    if (footballMatch.score.fullTime.home > footballMatch.score.fullTime.away) {
+  if (isCompleted) {
+    if (footballMatch.score.winner === 'HOME_TEAM') {
       winner = homeTeam.id;
-    } else if (footballMatch.score.fullTime.away > footballMatch.score.fullTime.home) {
+    } else if (footballMatch.score.winner === 'AWAY_TEAM') {
       winner = awayTeam.id;
     }
   }
 
   // Handle penalties
   let pens: string | undefined;
-  if (footballMatch.score.penalties?.home !== null && footballMatch.score.penalties?.away !== null && footballMatch.score.penalties) {
+  if (footballMatch.score.penalties?.home != null && footballMatch.score.penalties?.away != null) {
     pens = `${footballMatch.score.penalties.home}-${footballMatch.score.penalties.away}`;
   }
 
@@ -156,8 +172,8 @@ export function convertFootballDataToTournamentMatch(footballMatch: FootballData
     awayTeamId: awayTeam.id,
     date: new Date(footballMatch.utcDate).toLocaleDateString(),
     venue: footballMatch.homeTeam.name, // Using team name as placeholder since venue isn't provided
-    homeScore: footballMatch.score.fullTime.home ?? undefined,
-    awayScore: footballMatch.score.fullTime.away ?? undefined,
+    homeScore: homeScore ?? undefined,
+    awayScore: awayScore ?? undefined,
     winner: winner ?? undefined,
     status: isCompleted ? 'completed' : isLive ? 'live' : 'upcoming',
     pens: pens ?? undefined,
