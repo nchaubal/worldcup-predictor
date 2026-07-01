@@ -87,34 +87,24 @@ export interface FootballDataTeam {
 }
 
 export class FootballDataApiService {
-  private readonly baseUrl = 'https://api.football-data.org/v4';
-  private readonly apiKey: string;
-
-  constructor() {
-    this.apiKey = process.env.FOOTBALL_DATA_API_KEY || '';
-    if (!this.apiKey) {
-      console.warn('FOOTBALL_DATA_API_KEY not found in environment variables');
-    }
-  }
+  private readonly baseUrl = '/api/football-data';
 
   private async makeRequest<T>(endpoint: string): Promise<T> {
     try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
-        headers: {
-          'X-Auth-Token': this.apiKey,
-          'Content-Type': 'application/json',
-        },
-      });
+      const url = `${this.baseUrl}?endpoint=${encodeURIComponent(endpoint)}`;
+      console.log('Making request to server-side API:', url);
+      
+      const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error(`Football Data API error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`API error: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
       }
 
       return await response.json();
     } catch (error) {
       console.error('Football Data API request failed:', error);
-      // Return fallback data instead of throwing
-      return this.getFallbackData<T>(endpoint);
+      throw error;
     }
   }
 
