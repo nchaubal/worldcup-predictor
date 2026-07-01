@@ -195,7 +195,9 @@ export function getGroupStandingsFromAPI(footballMatches: FootballDataMatch[]) {
     if (match.status !== 'FINISHED') return;
     
     const group = match.group;
-    if (!group || !standings[group]) return;
+    // Convert "GROUP_A" to "A" for our standings structure
+    const groupLetter = group ? group.replace('GROUP_', '') : '';
+    if (!groupLetter || !standings[groupLetter]) return;
     
     const homeTeamName = match.homeTeam.name;
     const awayTeamName = match.awayTeam.name;
@@ -203,17 +205,17 @@ export function getGroupStandingsFromAPI(footballMatches: FootballDataMatch[]) {
     const awayScore = match.score.fullTime.away || 0;
     
     // Find or create team records
-    let homeTeam = standings[group].find(t => t.name === homeTeamName);
-    let awayTeam = standings[group].find(t => t.name === awayTeamName);
+    let homeTeam = standings[groupLetter].find(t => t.name === homeTeamName);
+    let awayTeam = standings[groupLetter].find(t => t.name === awayTeamName);
     
     if (!homeTeam) {
       homeTeam = { name: homeTeamName, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0 };
-      standings[group].push(homeTeam);
+      standings[groupLetter].push(homeTeam);
     }
     
     if (!awayTeam) {
       awayTeam = { name: awayTeamName, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0 };
-      standings[group].push(awayTeam);
+      standings[groupLetter].push(awayTeam);
     }
     
     // Update stats
