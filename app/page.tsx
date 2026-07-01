@@ -9,9 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LayoutGrid, GitBranch, Users, MapPin, CheckCircle2, Clock, Radio } from "lucide-react";
 import { TEAMS, GROUPS, GROUP_STANDINGS, R32_MATCHES, getTeamById } from "@/lib/tournament-data";
-import { syncTournamentWithFIFA, getLiveTournamentMatches, getCompletedTournamentMatches, getUpcomingTournamentMatches } from "@/lib/tournament-sync";
-import { FIFAScores } from "@/components/FIFAScores";
-import { useFIFAScores } from "@/hooks/useFIFAScores";
+import { syncTournamentWithFootballData, getLiveTournamentMatches, getCompletedTournamentMatches, getUpcomingTournamentMatches } from "@/lib/football-data-sync";
+import { FootballDataScores } from "@/components/FootballDataScores";
+import { useFootballData } from "@/hooks/useFootballData";
 
 const STATS = [
   { label: "Teams",   value: "48", icon: "🌍" },
@@ -34,14 +34,13 @@ const statusLabel = {
 
 export default function HomePage() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const { matches: fifaMatches, getLiveMatches } = useFIFAScores();
-  const liveFIFAMatches = getLiveMatches();
+  const { matches: footballMatches, fetchLiveMatches } = useFootballData();
   
   // Use dynamic sync system to get real-time match data
-  const syncedTournament = syncTournamentWithFIFA(fifaMatches);
-  const completedMatches = getCompletedTournamentMatches(fifaMatches).filter(m => m.id.startsWith('r32_'));
-  const liveMatches = getLiveTournamentMatches(fifaMatches).filter(m => m.id.startsWith('r32_'));
-  const upcomingMatches = getUpcomingTournamentMatches(fifaMatches).filter(m => m.id.startsWith('r32_'));
+  const syncedTournament = syncTournamentWithFootballData(footballMatches);
+  const completedMatches = getCompletedTournamentMatches(footballMatches).filter(m => m.id.startsWith('r32_'));
+  const liveMatches = getLiveTournamentMatches(footballMatches).filter(m => m.id.startsWith('r32_'));
+  const upcomingMatches = getUpcomingTournamentMatches(footballMatches).filter(m => m.id.startsWith('r32_'));
   const featuredGroups    = ["I", "J", "C", "L"]; // France, Argentina, Brazil, England groups
 
   return (
@@ -115,7 +114,7 @@ export default function HomePage() {
         </div>
 
         {/* ── Live Scores ───────────────────────────────────── */}
-        <FIFAScores />
+        <FootballDataScores />
 
         {/* ── R32 Results ────────────────────────────────────── */}
         <div>
@@ -124,28 +123,28 @@ export default function HomePage() {
             <Link href="/bracket" className="text-sm text-primary hover:underline">View full bracket →</Link>
           </div>
 
-          {liveFIFAMatches.length > 0 && (
+          {footballMatches.filter(m => m.isLive).length > 0 && (
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <Radio className="h-4 w-4 text-red-400 animate-pulse" />
                 <span className="text-sm font-semibold text-red-400 uppercase tracking-wide">Live Now</span>
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
-                {liveFIFAMatches.map((match) => {
+                {footballMatches.filter(m => m.isLive).map((match) => {
                   return (
                     <Card key={match.id} className="border-red-500/30 bg-red-500/5 ring-1 ring-red-500/20">
                       <CardContent className="py-4 flex items-center gap-3">
                         <div className="flex-1 flex items-center gap-2">
-                          <span className="text-lg font-bold text-muted-foreground">{match.homeTeam.code}</span>
+                          <span className="text-lg font-bold text-muted-foreground">{match.homeTeam.tla}</span>
                           <span className="font-semibold text-sm">{match.homeTeam.name}</span>
                         </div>
                         <div className="text-center shrink-0">
                           <div className="text-xs text-red-400 font-bold animate-pulse">LIVE</div>
-                          <div className="text-lg font-bold">{match.homeTeam.score} - {match.awayTeam.score}</div>
+                          <div className="text-lg font-bold">{match.formattedScore}</div>
                         </div>
                         <div className="flex-1 flex items-center justify-end gap-2">
                           <span className="font-semibold text-sm">{match.awayTeam.name}</span>
-                          <span className="text-lg font-bold text-muted-foreground">{match.awayTeam.code}</span>
+                          <span className="text-lg font-bold text-muted-foreground">{match.awayTeam.tla}</span>
                         </div>
                       </CardContent>
                     </Card>

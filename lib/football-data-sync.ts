@@ -1,0 +1,158 @@
+// Football Data.org Tournament Sync
+// Sync tournament data with Football Data.org API for real-time updates
+
+import { FootballDataMatch, footballDataApi } from './football-data-api';
+import { R32_MATCHES } from './tournament-data';
+import { TEAMS } from './tournament-data';
+
+export interface TournamentMatch {
+  id: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  date: string;
+  venue: string;
+  homeScore?: number;
+  awayScore?: number;
+  winner?: string;
+  status: "completed" | "live" | "upcoming";
+  pens?: string;
+}
+
+export function syncMatchWithFootballData(match: TournamentMatch, footballMatches: FootballDataMatch[]): TournamentMatch {
+  // Find matching Football Data match by team names
+  const homeTeam = TEAMS.find(t => t.id === match.homeTeamId);
+  const awayTeam = TEAMS.find(t => t.id === match.awayTeamId);
+  
+  if (!homeTeam || !awayTeam) {
+    return match;
+  }
+
+  const footballMatch = footballMatches.find(fm => 
+    (fm.homeTeam.name === homeTeam.name && fm.awayTeam.name === awayTeam.name) ||
+    (fm.homeTeam.name === awayTeam.name && fm.awayTeam.name === homeTeam.name)
+  );
+
+  if (!footballMatch) {
+    return match;
+  }
+
+  // Check if teams are flipped in the API response
+  const teamsFlipped = footballMatch.homeTeam.name !== homeTeam.name;
+  const homeScore = teamsFlipped ? footballMatch.score.fullTime.away : footballMatch.score.fullTime.home;
+  const awayScore = teamsFlipped ? footballMatch.score.fullTime.home : footballMatch.score.fullTime.away;
+
+  // Determine match status
+  const isCompleted = footballMatch.status === 'FINISHED';
+  const isLive = footballMatch.status === 'LIVE' || footballMatch.status === 'IN_PLAY' || footballMatch.status === 'PAUSED';
+
+  // Calculate winner for completed matches
+  let winner: string | undefined;
+  if (isCompleted && homeScore !== null && awayScore !== null) {
+    if (homeScore > awayScore) {
+      winner = match.homeTeamId;
+    } else if (awayScore > homeScore) {
+      winner = match.awayTeamId;
+    }
+  }
+
+  // Handle penalties
+  let pens: string | undefined;
+  if (footballMatch.score.penalties?.home !== null && footballMatch.score.penalties?.away !== null && footballMatch.score.penalties) {
+    const homePenalties = teamsFlipped ? footballMatch.score.penalties.away : footballMatch.score.penalties.home;
+    const awayPenalties = teamsFlipped ? footballMatch.score.penalties.home : footballMatch.score.penalties.away;
+    pens = `${homePenalties}-${awayPenalties}`;
+  }
+
+  return {
+    ...match,
+    homeScore: homeScore ?? match.homeScore,
+    awayScore: awayScore ?? match.awayScore,
+    winner: winner ?? match.winner,
+    status: isCompleted ? 'completed' : isLive ? 'live' : 'upcoming',
+    pens: pens ?? match.pens,
+  };
+}
+
+// Sync all tournament rounds with Football Data
+export function syncTournamentWithFootballData(footballMatches: FootballDataMatch[]) {
+  return {
+    r32: R32_MATCHES.map(match => syncMatchWithFootballData(match, footballMatches)),
+    // Future rounds will be added when data is available
+  };
+}
+
+// Get live matches from tournament data
+export function getLiveTournamentMatches(footballMatches: FootballDataMatch[]) {
+  const synced = syncTournamentWithFootballData(footballMatches);
+  return synced.r32.filter(match => match.status === 'live');
+}
+
+// Get completed matches from tournament data
+export function getCompletedTournamentMatches(footballMatches: FootballDataMatch[]) {
+  const synced = syncTournamentWithFootballData(footballMatches);
+  return synced.r32.filter(match => match.status === 'completed');
+}
+
+// Get upcoming matches from tournament data
+export function getUpcomingTournamentMatches(footballMatches: FootballDataMatch[]) {
+  const synced = syncTournamentWithFootballData(footballMatches);
+  return synced.r32.filter(match => match.status === 'upcoming');
+}
+
+// Convert Football Data match to our tournament match format
+export function convertFootballDataToTournamentMatch(footballMatch: FootballDataMatch): TournamentMatch | null {
+  // Find team IDs by team names
+  const homeTeam = TEAMS.find(t => t.name === footballMatch.homeTeam.name);
+  const awayTeam = TEAMS.find(t => t.name === footballMatch.awayTeam.name);
+  
+  if (!homeTeam || !awayTeam) {
+    return null;
+  }
+
+  // Determine match status
+  const isCompleted = footballMatch.status === 'FINISHED';
+  const isLive = footballMatch.status === 'LIVE' || footballMatch.status === 'IN_PLAY' || footballMatch.status === 'PAUSED';
+
+  // Calculate winner for completed matches
+  let winner: string | undefined;
+  if (isCompleted && footballMatch.score.fullTime.home !== null && footballMatch.score.fullTime.away !== null) {
+    if (footballMatch.score.fullTime.home > footballMatch.score.fullTime.away) {
+      winner = homeTeam.id;
+    } else if (footballMatch.score.fullTime.away > footballMatch.score.fullTime.home) {
+      winner = awayTeam.id;
+    }
+  }
+
+  // Handle penalties
+  let pens: string | undefined;
+  if (footballMatch.score.penalties?.home !== null && footballMatch.score.penalties?.away !== null && footballMatch.score.penalties) {
+    pens = `${footballMatch.score.penalties.home}-${footballMatch.score.penalties.away}`;
+  }
+
+  // Generate a unique ID for the match
+  const matchId = `${homeTeam.id}-${awayTeam.id}-${new Date(footballMatch.utcDate).getTime()}`;
+
+  return {
+    id: matchId,
+    homeTeamId: homeTeam.id,
+    awayTeamId: awayTeam.id,
+    date: new Date(footballMatch.utcDate).toLocaleDateString(),
+    venue: footballMatch.homeTeam.name, // Using team name as placeholder since venue isn't provided
+    homeScore: footballMatch.score.fullTime.home ?? undefined,
+    awayScore: footballMatch.score.fullTime.away ?? undefined,
+    winner: winner ?? undefined,
+    status: isCompleted ? 'completed' : isLive ? 'live' : 'upcoming',
+    pens: pens ?? undefined,
+  };
+}
+
+// Get matches by stage (Round of 32, Round of 16, etc.)
+export function getMatchesByStage(footballMatches: FootballDataMatch[], stage: string): TournamentMatch[] {
+  const stageMatches = footballMatches.filter(match => 
+    match.stage.toLowerCase().includes(stage.toLowerCase())
+  );
+  
+  return stageMatches
+    .map(convertFootballDataToTournamentMatch)
+    .filter((match): match is TournamentMatch => match !== null);
+}

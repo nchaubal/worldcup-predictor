@@ -4,9 +4,9 @@ import React, { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 import { TEAMS, Team, R32_MATCHES } from "@/lib/tournament-data";
-import { syncTournamentWithFIFA } from "@/lib/tournament-sync";
+import { syncTournamentWithFootballData } from "@/lib/football-data-sync";
 import { predictMatch } from "@/lib/ai-predictor";
-import { useFIFAScores } from "@/hooks/useFIFAScores";
+import { useFootballData } from "@/hooks/useFootballData";
 import { GitBranch, Brain, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -200,8 +200,7 @@ function Col({ matches, picks, onPick, showAI }: {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function BracketPage() {
   const { setKnockoutPrediction, knockoutPredictions } = useTournamentSupabase();
-  const { matches: fifaMatches, getLiveMatches } = useFIFAScores();
-  const liveFIFAMatches = getLiveMatches();
+  const { matches: footballMatches } = useFootballData();
   const [picks, setPicks]         = useState<Record<string, string>>({});
 
   // knockoutPredictions loads asynchronously from Supabase after auth
@@ -260,14 +259,14 @@ export default function BracketPage() {
 
   // R32 winner helper with dynamic sync
   const r32W = (matchId: string): string | null => {
-    const syncedTournament = syncTournamentWithFIFA(fifaMatches);
+    const syncedTournament = syncTournamentWithFootballData(footballMatches);
     const syncedMatch = syncedTournament.r32.find(m => m.id === matchId);
     return syncedMatch?.winner ?? picks[matchId] ?? null;
   };
 
   // R32 → MatchDef lookup by id with dynamic sync
   const r32ById = (id: string): MatchDef => {
-    const syncedTournament = syncTournamentWithFIFA(fifaMatches);
+    const syncedTournament = syncTournamentWithFootballData(footballMatches);
     const syncedMatch = syncedTournament.r32.find(m => m.id === id);
     
     if (!syncedMatch) {
