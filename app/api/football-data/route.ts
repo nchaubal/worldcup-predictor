@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const FOOTBALL_DATA_API_KEY = process.env.FOOTBALL_DATA_API_KEY;
+const FOOTBALL_DATA_API_KEY = process.env.FOOTBALL_DATA_API_KEY || '2a1c8491bcc248bf922be69de6183527';
 const BASE_URL = 'https://api.football-data.org/v4';
 
 export async function GET(request: NextRequest) {
@@ -17,8 +17,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!FOOTBALL_DATA_API_KEY) {
-    console.error('FOOTBALL_DATA_API_KEY not configured');
+  const apiKey = FOOTBALL_DATA_API_KEY || '2a1c8491bcc248bf922be69de6183527';
+  
+  if (!apiKey) {
     return NextResponse.json(
       { error: 'API key not configured' },
       { status: 500 }
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     
     const response = await fetch(url, {
       headers: {
-        'X-Auth-Token': FOOTBALL_DATA_API_KEY,
+        'X-Auth-Token': apiKey,
         'Content-Type': 'application/json',
       },
     });
