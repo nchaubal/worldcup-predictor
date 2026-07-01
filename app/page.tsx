@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LayoutGrid, GitBranch, Users, MapPin, CheckCircle2, Clock, Radio } from "lucide-react";
 import { TEAMS, GROUPS, GROUP_STANDINGS, R32_MATCHES, getTeamById } from "@/lib/tournament-data";
-import { BBCSportScores } from "@/components/BBCSportScores";
+import { FIFAScores } from "@/components/FIFAScores";
 
 const STATS = [
   { label: "Teams",   value: "48", icon: "🌍" },
@@ -97,7 +97,7 @@ export default function HomePage() {
         </div>
 
         {/* ── Live Scores ───────────────────────────────────── */}
-        <BBCSportScores />
+        <FIFAScores />
 
         {/* ── R32 Results ────────────────────────────────────── */}
         <div>
