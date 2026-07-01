@@ -7,26 +7,43 @@ export function useLiveScores(pollInterval: number = 30000) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const liveScoreService = getLiveScoreService();
-
-    // Subscribe to live score updates
-    const unsubscribe = liveScoreService.subscribe((updatedMatches) => {
-      setMatches(updatedMatches);
+    // Check if API key is available
+    if (!process.env.NEXT_PUBLIC_API_FOOTBALL_KEY) {
+      setError('API key not configured. See LIVE_SCORES_SETUP.md for instructions.');
       setLoading(false);
-      setError(null);
-    });
+      return;
+    }
 
-    // Start polling
-    liveScoreService.startPolling(pollInterval);
+    try {
+      const liveScoreService = getLiveScoreService();
 
-    // Cleanup
-    return () => {
-      unsubscribe();
-      liveScoreService.stopPolling();
-    };
+      // Subscribe to live score updates
+      const unsubscribe = liveScoreService.subscribe((updatedMatches) => {
+        setMatches(updatedMatches);
+        setLoading(false);
+        setError(null);
+      });
+
+      // Start polling
+      liveScoreService.startPolling(pollInterval);
+
+      // Cleanup
+      return () => {
+        unsubscribe();
+        liveScoreService.stopPolling();
+      };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to initialize live scores');
+      setLoading(false);
+    }
   }, [pollInterval]);
 
   const refresh = useCallback(async () => {
+    if (!process.env.NEXT_PUBLIC_API_FOOTBALL_KEY) {
+      setError('API key not configured. See LIVE_SCORES_SETUP.md for instructions.');
+      return;
+    }
+
     try {
       setLoading(true);
       const liveScoreService = getLiveScoreService();
