@@ -33,12 +33,6 @@ const defaultUser: UserPredictions = {
   totalPoints: 0,
 };
 
-const MOCK_OPPONENTS: UserPredictions[] = [
-  { userId: "u2", userName: "Alex M.", avatar: "🏆", predictions: [], totalPoints: 47 },
-  { userId: "u3", userName: "Sara K.", avatar: "🎯", predictions: [], totalPoints: 38 },
-  { userId: "u4", userName: "Luca P.", avatar: "🌟", predictions: [], totalPoints: 55 },
-  { userId: "u5", userName: "Maya R.", avatar: "🔥", predictions: [], totalPoints: 29 },
-];
 
 const TournamentContext = createContext<TournamentContextType | null>(null);
 
@@ -46,15 +40,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserPredictions>(defaultUser);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [knockoutPredictions, setKnockoutPredictions] = useState<{ [matchId: string]: string }>({});
-  const [leagues, setLeagues] = useState<League[]>([
-    {
-      id: "global",
-      name: "Global League",
-      code: "GLOBAL",
-      members: [defaultUser, ...MOCK_OPPONENTS],
-      createdBy: "system",
-    },
-  ]);
+  const [leagues, setLeagues] = useState<League[]>([]);
   const [actualResults] = useState<ActualResult[]>([]);
 
   const setPrediction = useCallback((matchId: string, homeScore: number, awayScore: number) => {
@@ -120,8 +106,18 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
   }, [predictions, actualResults]);
 
   const getLeaderboard = useCallback((leagueId?: string) => {
-    const league = leagues.find((l) => l.id === (leagueId ?? "global"));
-    if (!league) return [];
+    // If no leagues specified or no leagues exist, return just current user
+    if (!leagueId || leagues.length === 0) {
+      const userWithPoints: UserPredictions = { ...currentUser, totalPoints: getTotalPoints() };
+      return [userWithPoints];
+    }
+    
+    const league = leagues.find((l) => l.id === leagueId);
+    if (!league) {
+      const userWithPoints: UserPredictions = { ...currentUser, totalPoints: getTotalPoints() };
+      return [userWithPoints];
+    }
+    
     const userWithPoints: UserPredictions = { ...currentUser, totalPoints: getTotalPoints() };
     return league.members
       .map((m) => (m.userId === currentUser.userId ? userWithPoints : m))
