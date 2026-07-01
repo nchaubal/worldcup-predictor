@@ -27,9 +27,16 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
     return match;
   }
 
+  // Helper function to normalize team names for matching
+  const normalizeTeamName = (name: string): string => {
+    return name.toLowerCase().replace(/\s+(islands|republic)/gi, '').trim();
+  };
+
   const footballMatch = footballMatches.find(fm => 
-    (fm.homeTeam.name === homeTeam.name && fm.awayTeam.name === awayTeam.name) ||
-    (fm.homeTeam.name === awayTeam.name && fm.awayTeam.name === homeTeam.name)
+    (normalizeTeamName(fm.homeTeam.name) === normalizeTeamName(homeTeam.name) && 
+     normalizeTeamName(fm.awayTeam.name) === normalizeTeamName(awayTeam.name)) ||
+    (normalizeTeamName(fm.homeTeam.name) === normalizeTeamName(awayTeam.name) && 
+     normalizeTeamName(fm.awayTeam.name) === normalizeTeamName(homeTeam.name))
   );
 
   if (!footballMatch) {
@@ -110,9 +117,14 @@ export function getUpcomingTournamentMatches(footballMatches: FootballDataMatch[
 
 // Convert Football Data match to our tournament match format
 export function convertFootballDataToTournamentMatch(footballMatch: FootballDataMatch): TournamentMatch | null {
-  // Find team IDs by team names
-  const homeTeam = TEAMS.find(t => t.name === footballMatch.homeTeam.name);
-  const awayTeam = TEAMS.find(t => t.name === footballMatch.awayTeam.name);
+  // Helper function to normalize team names for matching
+  const normalizeTeamName = (name: string): string => {
+    return name.toLowerCase().replace(/\s+(islands|republic)/gi, '').trim();
+  };
+
+  // Find team IDs by team names with normalized matching
+  const homeTeam = TEAMS.find(t => normalizeTeamName(t.name) === normalizeTeamName(footballMatch.homeTeam.name));
+  const awayTeam = TEAMS.find(t => normalizeTeamName(t.name) === normalizeTeamName(footballMatch.awayTeam.name));
   
   if (!homeTeam || !awayTeam) {
     return null;
