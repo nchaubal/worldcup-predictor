@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTournament } from "@/context/TournamentContext";
 import { TEAMS, Team, R32_MATCHES } from "@/lib/tournament-data";
 import { predictMatch } from "@/lib/ai-predictor";
-import { GitBranch, Brain, Trophy, CheckCircle2, Clock, Radio, ZoomIn } from "lucide-react";
+import { GitBranch, Brain, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -199,6 +199,7 @@ function Col({ matches, picks, onPick, showAI }: {
 export default function BracketPage() {
   const { setKnockoutPrediction } = useTournament();
   const [picks, setPicks]         = useState<Record<string, string>>({});
+  const [history, setHistory]     = useState<Record<string, string>[]>([]);
   const [scale, setScale]           = useState(1);
   const [bracketH, setBracketH]     = useState(0);
   const outerRef   = useRef<HTMLDivElement>(null);
@@ -227,8 +228,22 @@ export default function BracketPage() {
   }, [BRACKET_W]);
 
   const handlePick = (id: string, tid: string) => {
+    setHistory(prev => [...prev, picks]);
     setPicks(prev => ({ ...prev, [id]: tid }));
     setKnockoutPrediction(id, tid);
+  };
+
+  const handleUndo = () => {
+    if (history.length > 0) {
+      const previousState = history[history.length - 1];
+      setPicks(previousState);
+      setHistory(prev => prev.slice(0, -1));
+      
+      // Update knockout predictions for all changed picks
+      Object.keys(previousState).forEach(matchId => {
+        setKnockoutPrediction(matchId, previousState[matchId]);
+      });
+    }
   };
 
   // ── Build match data ──────────────────────────────────────────────────────
@@ -337,10 +352,20 @@ export default function BracketPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold">Knockout Bracket</h1>
-            <p className="text-muted-foreground text-xs mt-0.5">Click any team to pick · hover to magnify</p>
+            <p className="text-muted-foreground text-xs mt-0.5">Click any team to pick · undo last prediction · hover to magnify</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {history.length > 0 && (
+            <button
+              onClick={handleUndo}
+              className="flex items-center gap-1.5 bg-muted/50 hover:bg-muted/70 border border-border/50 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              title="Undo last prediction"
+            >
+              <Undo className="h-3.5 w-3.5" />
+              Undo
+            </button>
+          )}
           {pickedCount > 0 && <Badge variant="secondary" className="text-xs">{pickedCount} picks</Badge>}
           {champion && (
             <div className="flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-xl px-3 py-1.5">
