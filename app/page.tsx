@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LayoutGrid, GitBranch, Users, MapPin, CheckCircle2, Clock, Radio } from "lucide-react";
 import { TEAMS, GROUPS, GROUP_STANDINGS, R32_MATCHES, getTeamById } from "@/lib/tournament-data";
+import { LiveScores } from "@/components/LiveScores";
 
 const STATS = [
   { label: "Teams",   value: "48", icon: "🌍" },
@@ -94,6 +95,9 @@ export default function HomePage() {
             </Card>
           ))}
         </div>
+
+        {/* ── Live Scores ───────────────────────────────────── */}
+        <LiveScores />
 
         {/* ── R32 Results ────────────────────────────────────── */}
         <div>
