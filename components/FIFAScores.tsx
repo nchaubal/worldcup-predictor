@@ -9,10 +9,8 @@ import { Radio, RefreshCw, Clock, CheckCircle2, Globe } from 'lucide-react';
 export function FIFAScores() {
   const { matches, loading, error, refresh, getLiveMatches, getMatchesByGroup, getMatchesByStage } = useFIFAScores();
   const [showAll, setShowAll] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'live' | 'group'>('all');
-  
   const liveMatches = getLiveMatches();
-  const displayMatches = showAll ? matches : (filter === 'live' ? liveMatches : matches);
+  const displayMatches = showAll ? matches : liveMatches;
 
   const getStatusIcon = (match: FIFAMatch) => {
     switch (match.status) {
