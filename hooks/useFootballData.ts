@@ -71,8 +71,26 @@ export const useFootballData = () => {
       setLoading(true);
       setError(null);
       
-      const response = await footballDataApi.getTodayWorldCupMatches();
-      const matchesWithDetails = response.matches.map(match => ({
+      // Try to get today's matches first
+      const todayResponse = await footballDataApi.getTodayWorldCupMatches();
+      
+      // If no matches today, get recent matches (last 5 days)
+      let matches = todayResponse.matches;
+      
+      if (matches.length === 0) {
+        const fiveDaysAgo = new Date();
+        fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+        const dateFrom = fiveDaysAgo.toISOString().split('T')[0];
+        const dateTo = new Date().toISOString().split('T')[0];
+        
+        const recentResponse = await footballDataApi.getWorldCupMatches({ 
+          dateFrom, 
+          dateTo 
+        });
+        matches = recentResponse.matches;
+      }
+      
+      const matchesWithDetails = matches.map(match => ({
         ...match,
         formattedTime: footballDataApi.getMatchTime(match),
         formattedScore: footballDataApi.getMatchScore(match),
@@ -82,8 +100,8 @@ export const useFootballData = () => {
       
       setMatches(matchesWithDetails);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch today matches');
-      console.error('Error fetching today matches:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch matches');
+      console.error('Error fetching matches:', err);
     } finally {
       setLoading(false);
     }

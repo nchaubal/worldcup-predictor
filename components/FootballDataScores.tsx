@@ -65,7 +65,7 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
       <Card className={className}>
         <CardHeader>
           <CardTitle className="text-lg">
-            {showOnlyLive ? 'Live Matches' : "Today's Matches"}
+            {showOnlyLive ? 'Live Matches' : "Recent World Cup Matches"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -73,7 +73,7 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
             <p>
               {showOnlyLive 
                 ? 'No live matches currently' 
-                : 'No matches scheduled for today'
+                : 'No recent World Cup matches found'
               }
             </p>
           </div>
@@ -119,7 +119,7 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
     <Card className={className}>
       <CardHeader>
         <CardTitle className="text-lg flex items-center justify-between">
-          <span>{showOnlyLive ? 'Live Matches' : "Today's Matches"}</span>
+          <span>{showOnlyLive ? 'Live Matches' : "Recent World Cup Matches"}</span>
           {!showOnlyLive && (
             <button
               onClick={() => fetchTodayMatches()}
