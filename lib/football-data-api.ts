@@ -193,8 +193,8 @@ export class FootballDataApiService {
     if (filters?.status) params.append('status', filters.status);
 
     const query = params.toString() ? `?${params.toString()}` : '';
-    const matches = await this.makeRequest(`/competitions/${competitionId}/matches${query}`) as FootballDataMatch[];
-    return { matches };
+    const response = await this.makeRequest(`/competitions/${competitionId}/matches${query}`) as { matches: FootballDataMatch[] };
+    return response;
   }
 
   // Get World Cup matches (WC = 2000)
