@@ -68,7 +68,7 @@ export function syncMatchWithFIFA(match: TournamentMatch, fifaMatches: FIFAMatch
 export function syncTournamentWithFIFA(fifaMatches: FIFAMatch[]) {
   return {
     r32: R32_MATCHES.map(match => syncMatchWithFIFA(match, fifaMatches)),
-    r16: R16_MATCHES.map(match => syncMatchWithFIFA(match, fifaMatches)),
+    // R16 matches don't have team IDs yet (depend on R32 winners)
     // Future rounds will be added when data is available
   };
 }
@@ -76,32 +76,17 @@ export function syncTournamentWithFIFA(fifaMatches: FIFAMatch[]) {
 // Get live matches from tournament data
 export function getLiveTournamentMatches(fifaMatches: FIFAMatch[]) {
   const synced = syncTournamentWithFIFA(fifaMatches);
-  const allMatches = [
-    ...synced.r32,
-    ...synced.r16
-  ];
-  
-  return allMatches.filter(match => match.status === 'live');
+  return synced.r32.filter(match => match.status === 'live');
 }
 
 // Get completed matches from tournament data
 export function getCompletedTournamentMatches(fifaMatches: FIFAMatch[]) {
   const synced = syncTournamentWithFIFA(fifaMatches);
-  const allMatches = [
-    ...synced.r32,
-    ...synced.r16
-  ];
-  
-  return allMatches.filter(match => match.status === 'completed');
+  return synced.r32.filter(match => match.status === 'completed');
 }
 
 // Get upcoming matches from tournament data
 export function getUpcomingTournamentMatches(fifaMatches: FIFAMatch[]) {
   const synced = syncTournamentWithFIFA(fifaMatches);
-  const allMatches = [
-    ...synced.r32,
-    ...synced.r16
-  ];
-  
-  return allMatches.filter(match => match.status === 'upcoming');
+  return synced.r32.filter(match => match.status === 'upcoming');
 }
