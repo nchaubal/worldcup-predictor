@@ -34,12 +34,12 @@ const statusLabel = {
 
 export default function HomePage() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const { matches: footballMatches, fetchLiveMatches, fetchTodayMatches } = useFootballData();
+  const { matches: footballMatches, fetchWorldCupMatches } = useFootballData();
 
-  // Fetch World Cup matches data when component mounts
+  // Fetch ALL World Cup matches when component mounts so standings/bracket populate
   useEffect(() => {
-    fetchTodayMatches();
-  }, [fetchTodayMatches]);
+    fetchWorldCupMatches();
+  }, [fetchWorldCupMatches]);
   
   // Use dynamic sync system to get real-time match data
   const syncedTournament = syncTournamentWithFootballData(footballMatches);

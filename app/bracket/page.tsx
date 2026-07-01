@@ -200,13 +200,13 @@ function Col({ matches, picks, onPick, showAI }: {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function BracketPage() {
   const { setKnockoutPrediction, knockoutPredictions } = useTournamentSupabase();
-  const { matches: footballMatches, fetchTodayMatches } = useFootballData();
+  const { matches: footballMatches, fetchWorldCupMatches } = useFootballData();
   const [picks, setPicks]         = useState<Record<string, string>>({});
 
-  // Fetch World Cup matches data when component mounts
+  // Fetch ALL World Cup matches so the bracket syncs across all rounds
   useEffect(() => {
-    fetchTodayMatches();
-  }, [fetchTodayMatches]);
+    fetchWorldCupMatches();
+  }, [fetchWorldCupMatches]);
 
   // knockoutPredictions loads asynchronously from Supabase after auth
   // resolves, so seed local picks once they arrive (e.g. on page reload).

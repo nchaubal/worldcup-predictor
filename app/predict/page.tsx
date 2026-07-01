@@ -16,13 +16,13 @@ const THIRD_PLACE_GROUPS = new Set(["B", "D", "E", "F", "I", "J", "K", "L"]);
 
 export default function PredictPage() {
   const [activeGroup, setActiveGroup] = useState("A");
-  const { matches: footballMatches, fetchTodayMatches } = useFootballData();
+  const { matches: footballMatches, fetchWorldCupMatches } = useFootballData();
   const apiGroupStandings = getGroupStandingsFromAPI(footballMatches);
 
-  // Fetch World Cup matches data when component mounts
+  // Fetch ALL World Cup matches so group standings populate
   useEffect(() => {
-    fetchTodayMatches();
-  }, [fetchTodayMatches]);
+    fetchWorldCupMatches();
+  }, [fetchWorldCupMatches]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
