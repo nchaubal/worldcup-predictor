@@ -1,0 +1,319 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
+
+// Database types
+export interface Profile {
+  id: string;
+  username: string;
+  avatar: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface League {
+  id: string;
+  name: string;
+  code: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeagueMember {
+  id: string;
+  league_id: string;
+  user_id: string;
+  joined_at: string;
+}
+
+export interface GroupPrediction {
+  id: string;
+  user_id: string;
+  match_id: string;
+  home_score: number;
+  away_score: number;
+  predicted_winner: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnockoutPrediction {
+  id: string;
+  user_id: string;
+  match_id: string;
+  winner_team_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MatchResult {
+  id: string;
+  match_id: string;
+  home_score: number;
+  away_score: number;
+  actual_winner: string;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface UserPoints {
+  id: string;
+  user_id: string;
+  league_id: string;
+  total_points: number;
+  exact_predictions: number;
+  result_predictions: number;
+  last_calculated_at: string;
+  profiles: {
+    id: string;
+    username: string;
+    avatar: string;
+  };
+}
+
+// Helper functions for database operations
+export class SupabaseService {
+  private static checkSupabase() {
+    if (!supabase) {
+      throw new Error('Supabase client not initialized. Please check environment variables.');
+    }
+  }
+
+  // Profile operations
+  static async getProfile(userId: string): Promise<Profile | null> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  static async updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  // League operations
+  static async getLeagues(): Promise<League[]> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('leagues')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async createLeague(name: string, createdBy: string): Promise<League> {
+    this.checkSupabase();
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    const { data, error } = await supabase!
+      .from('leagues')
+      .insert({ name, code, created_by: createdBy })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    // Add creator as member
+    await this.joinLeague(data.id, createdBy);
+    
+    return data;
+  }
+
+  static async joinLeague(leagueId: string, userId: string): Promise<void> {
+    this.checkSupabase();
+    const { error } = await supabase!
+      .from('league_members')
+      .insert({ league_id: leagueId, user_id: userId });
+    
+    if (error) throw error;
+  }
+
+  static async getLeagueByCode(code: string): Promise<League | null> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('leagues')
+      .select('*')
+      .eq('code', code.toUpperCase())
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  }
+
+  static async getLeagueMembers(leagueId: string): Promise<Profile[]> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('league_members')
+      .select('profiles!inner(*)')
+      .eq('league_id', leagueId);
+    
+    if (error) throw error;
+    return (data as any[])?.map(member => member.profiles) || [];
+  }
+
+  // Prediction operations
+  static async getGroupPredictions(userId: string): Promise<GroupPrediction[]> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('group_predictions')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async upsertGroupPrediction(
+    userId: string, 
+    matchId: string, 
+    homeScore: number, 
+    awayScore: number, 
+    predictedWinner: string
+  ): Promise<GroupPrediction> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('group_predictions')
+      .upsert({
+        user_id: userId,
+        match_id: matchId,
+        home_score: homeScore,
+        away_score: awayScore,
+        predicted_winner: predictedWinner
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  static async getKnockoutPredictions(userId: string): Promise<KnockoutPrediction[]> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('knockout_predictions')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async upsertKnockoutPrediction(
+    userId: string, 
+    matchId: string, 
+    winnerTeamId: string
+  ): Promise<KnockoutPrediction> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('knockout_predictions')
+      .upsert({
+        user_id: userId,
+        match_id: matchId,
+        winner_team_id: winnerTeamId
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  // Analytics operations
+  static async getUserPoints(leagueId: string): Promise<UserPoints[]> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('user_points')
+      .select(`
+        *,
+        profiles!inner (
+          id,
+          username,
+          avatar
+        )
+      `)
+      .eq('league_id', leagueId)
+      .order('total_points', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async calculateUserPoints(userId: string, leagueId: string): Promise<number> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .rpc('calculate_user_points', { 
+        p_user_id: userId, 
+        p_league_id: leagueId 
+      });
+    
+    if (error) throw error;
+    return data || 0;
+  }
+
+  // Auth helpers
+  static async signIn(email: string, password: string) {
+    this.checkSupabase();
+    const { data, error } = await supabase!.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) throw error;
+    return data;
+  }
+
+  static async signUp(email: string, password: string, username: string) {
+    this.checkSupabase();
+    const { data, error } = await supabase!.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
+        },
+      },
+    });
+    
+    if (error) throw error;
+    return data;
+  }
+
+  static async signOut() {
+    this.checkSupabase();
+    const { error } = await supabase!.auth.signOut();
+    if (error) throw error;
+  }
+
+  static async getCurrentUser() {
+    this.checkSupabase();
+    const { data: { user } } = await supabase!.auth.getUser();
+    return user;
+  }
+
+  static onAuthStateChange(callback: (event: string, session: any) => void) {
+    this.checkSupabase();
+    return supabase!.auth.onAuthStateChange(callback);
+  }
+}

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { useTournament } from "@/context/TournamentContext";
+import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 import { TEAMS, Team, R32_MATCHES } from "@/lib/tournament-data";
 import { predictMatch } from "@/lib/ai-predictor";
 import { useFIFAScores } from "@/hooks/useFIFAScores";
@@ -198,7 +198,7 @@ function Col({ matches, picks, onPick, showAI }: {
 // Main page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function BracketPage() {
-  const { setKnockoutPrediction } = useTournament();
+  const { setKnockoutPrediction } = useTournamentSupabase();
   const { matches: fifaMatches, getLiveMatches } = useFIFAScores();
   const liveFIFAMatches = getLiveMatches();
   const [picks, setPicks]         = useState<Record<string, string>>({});

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Trophy, LayoutGrid, GitBranch, Users, User, BarChart3 } from "lucide-react";
+import { AuthButton } from "./AuthButton";
 
 const NAV_LINKS = [
   { href: "/",        label: "Home",    icon: Trophy },
@@ -52,6 +53,9 @@ export default function Navbar() {
                 </Link>
               );
             })}
+            <div className="ml-4 pl-4 border-l border-border">
+              <AuthButton />
+            </div>
           </nav>
         </div>
       </div>

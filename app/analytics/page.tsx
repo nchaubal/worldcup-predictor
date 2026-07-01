@@ -1,19 +1,31 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useTournament } from "@/context/TournamentContext";
+import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
+import { UserPredictions } from "@/lib/tournament-data";
 import { BarChart3, Trophy, Target, Users, TrendingUp, Calendar, Award } from "lucide-react";
 import { MOCK_ANALYTICS } from "@/lib/mock-data";
 
 export default function AnalyticsPage() {
-  const { leagues, currentUser, getLeaderboard } = useTournament();
+  const { leagues, currentUser, getLeaderboard, isLoading } = useTournamentSupabase();
   const [selectedLeague, setSelectedLeague] = useState(leagues[0]?.id || "");
+  const [leaderboard, setLeaderboard] = useState<UserPredictions[]>([]);
   
-  const leaderboard = getLeaderboard(selectedLeague);
   const currentLeague = leagues.find(l => l.id === selectedLeague);
+
+  // Load leaderboard data
+  useEffect(() => {
+    const loadLeaderboard = async () => {
+      if (selectedLeague) {
+        const data = await getLeaderboard(selectedLeague);
+        setLeaderboard(data);
+      }
+    };
+    loadLeaderboard();
+  }, [selectedLeague, getLeaderboard]);
 
   // Calculate additional analytics
   const analytics = useMemo(() => {
@@ -34,7 +46,11 @@ export default function AnalyticsPage() {
       avgPoints: Math.round(avgPoints),
       topPerformer,
       predictionAccuracy,
-      ...MOCK_ANALYTICS
+      mostPredictedWinner: MOCK_ANALYTICS.mostPredictedWinner,
+      highestScoringUser: MOCK_ANALYTICS.highestScoringUser,
+      mostActiveDay: MOCK_ANALYTICS.mostActiveDay,
+      predictionDistribution: MOCK_ANALYTICS.predictionDistribution,
+      teamPerformance: MOCK_ANALYTICS.teamPerformance
     };
   }, [currentLeague, leaderboard]);
 
@@ -138,7 +154,7 @@ export default function AnalyticsPage() {
             <CardContent>
               <div className="space-y-2">
                 {leaderboard.map((user, idx) => {
-                  const isMe = user.userId === currentUser.userId;
+                  const isMe = currentUser?.userId === user.userId;
                   const medalColors = [
                     "text-yellow-500",
                     "text-gray-400", 

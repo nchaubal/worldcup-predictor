@@ -1,39 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useTournament } from "@/context/TournamentContext";
+import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
+import { UserPredictions } from "@/lib/tournament-data";
 import { Users, Plus, LogIn, Trophy, Medal, Copy, CheckCheck } from "lucide-react";
 
 export default function LeaguesPage() {
-  const { leagues, currentUser, createLeague, joinLeague, getLeaderboard } = useTournament();
+  const { leagues, currentUser, createLeague, joinLeague, getLeaderboard, isLoading, isAuthenticated } = useTournamentSupabase();
   const [newLeagueName, setNewLeagueName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [activeLeague, setActiveLeague] = useState("global");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newLeagueName.trim()) return;
-    const league = createLeague(newLeagueName.trim());
-    setMessage({ type: "success", text: `League "${league.name}" created! Code: ${league.code}` });
-    setNewLeagueName("");
-    setActiveLeague(league.id);
+    try {
+      const league = await createLeague(newLeagueName.trim());
+      setMessage({ type: "success", text: `League "${league.name}" created! Code: ${league.code}` });
+      setNewLeagueName("");
+      setActiveLeague(league.id);
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to create league. Please try again." });
+    }
   };
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!joinCode.trim()) return;
-    const league = joinLeague(joinCode.trim());
-    if (league) {
-      setMessage({ type: "success", text: `Joined "${league.name}"!` });
-      setJoinCode("");
-      setActiveLeague(league.id);
-    } else {
-      setMessage({ type: "error", text: "League not found. Check the code and try again." });
+    try {
+      const league = await joinLeague(joinCode.trim());
+      if (league) {
+        setMessage({ type: "success", text: `Joined "${league.name}"!` });
+        setJoinCode("");
+        setActiveLeague(league.id);
+      } else {
+        setMessage({ type: "error", text: "League not found. Check the code and try again." });
+      }
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to join league. Please try again." });
     }
   };
 
@@ -43,8 +52,18 @@ export default function LeaguesPage() {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const leaderboard = getLeaderboard(activeLeague);
+  const [leaderboard, setLeaderboard] = useState<UserPredictions[]>([]);
   const currentLeague = leagues.find((l) => l.id === activeLeague);
+
+  useEffect(() => {
+    const loadLeaderboard = async () => {
+      if (activeLeague) {
+        const data = await getLeaderboard(activeLeague);
+        setLeaderboard(data);
+      }
+    };
+    loadLeaderboard();
+  }, [activeLeague, getLeaderboard]);
 
   const medalColors = [
     "text-yellow-500",
@@ -160,7 +179,7 @@ export default function LeaguesPage() {
           <CardContent>
             <div className="space-y-2">
               {leaderboard.map((user, idx) => {
-                const isMe = user.userId === currentUser.userId;
+                const isMe = currentUser?.userId === user.userId;
                 return (
                   <div
                     key={user.userId}
@@ -221,7 +240,7 @@ export default function LeaguesPage() {
           <CardContent>
             <div className="space-y-2">
               {leaderboard.map((user, idx) => {
-                const isMe = user.userId === currentUser.userId;
+                const isMe = currentUser?.userId === user.userId;
                 return (
                   <div
                     key={user.userId}
