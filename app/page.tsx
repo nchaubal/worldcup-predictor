@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LayoutGrid, GitBranch, Users, MapPin, CheckCircle2, Clock, Radio } from "lucide-react";
 import { TEAMS, GROUPS, GROUP_STANDINGS, R32_MATCHES, getTeamById } from "@/lib/tournament-data";
-import { syncTournamentWithFootballData, getLiveTournamentMatches, getCompletedTournamentMatches, getUpcomingTournamentMatches } from "@/lib/football-data-sync";
+import { syncTournamentWithFootballData, getLiveTournamentMatches, getCompletedTournamentMatches, getUpcomingTournamentMatches, getGroupStandingsFromAPI } from "@/lib/football-data-sync";
 import { FootballDataScores } from "@/components/FootballDataScores";
 import { useFootballData } from "@/hooks/useFootballData";
 
@@ -41,6 +41,7 @@ export default function HomePage() {
   const completedMatches = getCompletedTournamentMatches(footballMatches);
   const liveMatches = getLiveTournamentMatches(footballMatches);
   const upcomingMatches = getUpcomingTournamentMatches(footballMatches);
+  const apiGroupStandings = getGroupStandingsFromAPI(footballMatches);
   const featuredGroups    = ["I", "J", "C", "L"]; // France, Argentina, Brazil, England groups
 
   return (
@@ -232,7 +233,7 @@ export default function HomePage() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {featuredGroups.map((grp) => {
-              const standings = GROUP_STANDINGS[grp];
+              const standings = apiGroupStandings[grp] || [];
               const isSelected = selectedGroup === grp;
               return (
                 <Card 
@@ -248,28 +249,34 @@ export default function HomePage() {
                     }`}>Group {grp}</CardTitle>
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-0 space-y-1.5">
-                    {standings.map((s, idx) => {
-                      const team = getTeamById(s.teamId)!;
-                      const qualified = idx < 2 || (grp === "B" && idx === 2) || (grp === "D" && idx === 2) ||
-                        (grp === "E" && idx === 2) || (grp === "F" && idx === 2) || (grp === "I" && idx === 2) ||
-                        (grp === "J" && idx === 2) || (grp === "K" && idx === 2) || (grp === "L" && idx === 2);
-                      return (
-                        <div key={s.teamId}
-                          className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
-                            idx === 0 ? "bg-primary/10 ring-1 ring-primary/20" :
-                            idx === 1 ? "bg-accent/60" :
-                            qualified ? "bg-accent/30" : "opacity-40"
-                          }`}>
-                          <span className="w-4 text-center text-xs font-bold text-muted-foreground">{idx + 1}</span>
-                          <span className="text-lg">{team.flag}</span>
-                          <span className={`flex-1 font-medium text-xs truncate ${idx === 0 ? "text-primary" : ""}`}>{team.name}</span>
-                          <span className="font-black text-sm">{s.points}</span>
-                          <span className="text-xs text-muted-foreground w-8 text-right">
-                            {s.gd > 0 ? "+" : ""}{s.gd}
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {standings.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-xs">
+                        No matches completed
+                      </div>
+                    ) : (
+                      standings.map((s, idx) => {
+                        const team = getTeamById(s.name) || { name: s.name, flag: '🏳️', id: s.name };
+                        const qualified = idx < 2 || (grp === "B" && idx === 2) || (grp === "D" && idx === 2) ||
+                          (grp === "E" && idx === 2) || (grp === "F" && idx === 2) || (grp === "I" && idx === 2) ||
+                          (grp === "J" && idx === 2) || (grp === "K" && idx === 2) || (grp === "L" && idx === 2);
+                        return (
+                          <div key={s.name}
+                            className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
+                              idx === 0 ? "bg-primary/10 ring-1 ring-primary/20" :
+                              idx === 1 ? "bg-accent/60" :
+                              qualified ? "bg-accent/30" : "opacity-40"
+                            }`}>
+                            <span className="w-4 text-center text-xs font-bold text-muted-foreground">{idx + 1}</span>
+                            <span className="text-lg">{team.flag}</span>
+                            <span className={`flex-1 font-medium text-xs truncate ${idx === 0 ? "text-primary" : ""}`}>{team.name}</span>
+                            <span className="font-black text-sm">{s.points}</span>
+                            <span className="text-xs text-muted-foreground w-8 text-right">
+                              {s.gd > 0 ? "+" : ""}{s.gd}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
                   </CardContent>
                 </Card>
               );

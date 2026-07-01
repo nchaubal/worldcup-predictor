@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GROUPS, GROUP_STANDINGS, getTeamById } from "@/lib/tournament-data";
+import { useFootballData } from "@/hooks/useFootballData";
+import { getGroupStandingsFromAPI } from "@/lib/football-data-sync";
 import { LayoutGrid, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -14,6 +16,8 @@ const THIRD_PLACE_GROUPS = new Set(["B", "D", "E", "F", "I", "J", "K", "L"]);
 
 export default function PredictPage() {
   const [activeGroup, setActiveGroup] = useState("A");
+  const { matches: footballMatches } = useFootballData();
+  const apiGroupStandings = getGroupStandingsFromAPI(footballMatches);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -55,7 +59,7 @@ export default function PredictPage() {
         </TabsList>
 
         {GROUPS.map((g) => {
-          const standings = GROUP_STANDINGS[g];
+          const standings = apiGroupStandings[g] || [];
           const hasBestThird = THIRD_PLACE_GROUPS.has(g);
           return (
             <TabsContent key={g} value={g}>
@@ -65,8 +69,8 @@ export default function PredictPage() {
                     <CardTitle className="text-base font-bold">Group {g}</CardTitle>
                     <div className="flex gap-1">
                       {standings.map((s) => {
-                        const t = getTeamById(s.teamId)!;
-                        return <span key={t.id} className="text-xl" title={t.name}>{t.flag}</span>;
+                        const t = getTeamById(s.name) || { name: s.name, flag: '🏳️', id: s.name };
+                        return <span key={s.name} className="text-xl" title={t.name}>{t.flag}</span>;
                       })}
                     </div>
                   </div>
@@ -83,14 +87,19 @@ export default function PredictPage() {
                     <span className="w-8 text-center">GD</span>
                     <span className="w-8 text-center font-black">Pts</span>
                   </div>
-                  {standings.map((s, idx) => {
-                    const team = getTeamById(s.teamId)!;
+                  {standings.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No matches completed for this group
+                  </div>
+                ) : (
+                  standings.map((s, idx) => {
+                    const team = getTeamById(s.name) || { name: s.name, flag: '🏳️', id: s.name };
                     const isWinner   = idx === 0;
                     const isRunner   = idx === 1;
                     const isBest3rd  = idx === 2 && hasBestThird;
                     const isElim     = !isWinner && !isRunner && !isBest3rd;
                     return (
-                      <div key={s.teamId}
+                      <div key={s.name}
                         className={cn(
                           "grid grid-cols-[auto_1fr_repeat(6,_auto)] gap-x-3 px-5 py-3 items-center border-b border-border/20 last:border-0 transition-colors",
                           isWinner  && "bg-primary/8",
@@ -103,7 +112,7 @@ export default function PredictPage() {
                           <span className="text-2xl">{team.flag}</span>
                           <div className="min-w-0">
                             <div className={cn("font-semibold text-sm truncate", isWinner && "text-primary")}>{team.name}</div>
-                            <div className="text-[10px] text-muted-foreground">FIFA #{team.fifaRanking}</div>
+                            <div className="text-[10px] text-muted-foreground">FIFA #{'fifaRanking' in team ? team.fifaRanking : 'N/A'}</div>
                           </div>
                           {isWinner  && <Badge className="text-[9px] px-1 py-0 bg-primary/20 text-primary border-primary/30 shrink-0">1st</Badge>}
                           {isRunner  && <Badge variant="secondary" className="text-[9px] px-1 py-0 shrink-0">2nd</Badge>}
@@ -120,7 +129,8 @@ export default function PredictPage() {
                         <span className={cn("w-8 text-center font-black text-base", isWinner && "text-primary")}>{s.points}</span>
                       </div>
                     );
-                  })}
+                  })
+                )}
                 </CardContent>
               </Card>
             </TabsContent>

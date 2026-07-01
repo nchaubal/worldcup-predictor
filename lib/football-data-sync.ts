@@ -177,3 +177,80 @@ export function getMatchesByStage(footballMatches: FootballDataMatch[], stage: s
     .map(convertFootballDataToTournamentMatch)
     .filter((match): match is TournamentMatch => match !== null);
 }
+
+// Get group standings from API data
+export function getGroupStandingsFromAPI(footballMatches: FootballDataMatch[]) {
+  const groupMatches = footballMatches.filter(match => match.stage === 'GROUP_STAGE' && match.group);
+  
+  const standings: Record<string, any[]> = {};
+  
+  // Initialize all groups
+  for (let i = 65; i <= 76; i++) { // A to L
+    const groupLetter = String.fromCharCode(i);
+    standings[groupLetter] = [];
+  }
+  
+  // Calculate standings based on completed matches
+  groupMatches.forEach(match => {
+    if (match.status !== 'FINISHED') return;
+    
+    const group = match.group;
+    if (!group || !standings[group]) return;
+    
+    const homeTeamName = match.homeTeam.name;
+    const awayTeamName = match.awayTeam.name;
+    const homeScore = match.score.fullTime.home || 0;
+    const awayScore = match.score.fullTime.away || 0;
+    
+    // Find or create team records
+    let homeTeam = standings[group].find(t => t.name === homeTeamName);
+    let awayTeam = standings[group].find(t => t.name === awayTeamName);
+    
+    if (!homeTeam) {
+      homeTeam = { name: homeTeamName, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0 };
+      standings[group].push(homeTeam);
+    }
+    
+    if (!awayTeam) {
+      awayTeam = { name: awayTeamName, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: 0, points: 0 };
+      standings[group].push(awayTeam);
+    }
+    
+    // Update stats
+    homeTeam.played++;
+    awayTeam.played++;
+    homeTeam.gf += homeScore;
+    homeTeam.ga += awayScore;
+    awayTeam.gf += awayScore;
+    awayTeam.ga += homeScore;
+    
+    if (homeScore > awayScore) {
+      homeTeam.won++;
+      homeTeam.points += 3;
+      awayTeam.lost++;
+    } else if (awayScore > homeScore) {
+      awayTeam.won++;
+      awayTeam.points += 3;
+      homeTeam.lost++;
+    } else {
+      homeTeam.drawn++;
+      awayTeam.drawn++;
+      homeTeam.points += 1;
+      awayTeam.points += 1;
+    }
+    
+    homeTeam.gd = homeTeam.gf - homeTeam.ga;
+    awayTeam.gd = awayTeam.gf - awayTeam.ga;
+  });
+  
+  // Sort each group by points, then goal difference, then goals scored
+  Object.keys(standings).forEach(group => {
+    standings[group].sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.gd !== a.gd) return b.gd - a.gd;
+      return b.gf - a.gf;
+    });
+  });
+  
+  return standings;
+}
