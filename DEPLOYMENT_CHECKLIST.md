@@ -15,9 +15,9 @@ Go to your Vercel project dashboard:
 4. Add these variables:
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://upqsaazpkriqrcirqas.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVwcXNhYXpwa3JpcXJ3Y2lycWFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NTg3OTEsImV4cCI6MjA5ODQzNDc5MX0.2sycDTKQfdXb1vm7ikrdlUyqZt-725OXi8VH3WOmlXs
-NEXT_PUBLIC_APP_URL=https://worldcup-predictor-ninadchaubal.vercel.app
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_APP_URL=your_app_url
 NEXT_PUBLIC_APP_NAME=World Cup Predictor 2026
 NODE_ENV=production
 ```
@@ -32,7 +32,7 @@ After adding environment variables:
 ### 3. Verify Deployment
 
 Once deployed, visit:
-- **Production URL**: https://worldcup-predictor-ninadchaubal.vercel.app
+- **Production URL**: your_vercel_app_url.vercel.app
 - Should show FIFA World Cup emblem and full functionality
 
 ## 🎯 Expected Result
