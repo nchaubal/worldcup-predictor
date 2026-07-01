@@ -2,8 +2,8 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
 import { Prediction, UserPredictions, League, GROUP_MATCHES, KNOCKOUT_MATCHES, Match, Team } from "@/lib/tournament-data";
-import { calculatePoints } from "@/lib/ai-predictor";
-import { SupabaseService, Profile, GroupPrediction, KnockoutPrediction, UserPoints } from "@/lib/supabase";
+import { calculatePoints, calculatePointsWithBreakdown } from "@/lib/ai-predictor";
+import { SupabaseService, Profile, GroupPrediction, KnockoutPrediction, UserPoints, PredictionPrediction } from "@/lib/supabase";
 import { MOCK_USERS, MOCK_LEAGUE, generateMockPredictions } from "@/lib/mock-data";
 import { supabase } from "@/lib/supabase";
 
@@ -11,17 +11,21 @@ type TournamentContextType = {
   currentUser: UserPredictions | null;
   predictions: Prediction[];
   knockoutPredictions: { [matchId: string]: string };
+  predictionPredictions: PredictionPrediction[];
   leagues: League[];
   actualResults: { matchId: string; homeScore: number; awayScore: number }[];
   isLoading: boolean;
   isAuthenticated: boolean;
   setPrediction: (matchId: string, homeScore: number, awayScore: number) => void;
   setKnockoutPrediction: (matchId: string, winnerId: string) => void;
+  setPredictionPrediction: (predictedUserId: string, matchId: string, homeScore: number, awayScore: number) => void;
+  deletePredictionPrediction: (predictedUserId: string, matchId: string) => void;
   createLeague: (name: string) => Promise<League>;
   joinLeague: (code: string) => Promise<League | null>;
   updateUserName: (name: string) => void;
   getLeaderboard: (leagueId?: string) => Promise<UserPredictions[]>;
   getTotalPoints: () => number;
+  getPointsBreakdown: () => { total: number; exact: number; margin: number; result: number; prediction: number };
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -33,6 +37,7 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
   const [currentUser, setCurrentUser] = useState<UserPredictions | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [knockoutPredictions, setKnockoutPredictions] = useState<{ [matchId: string]: string }>({});
+  const [predictionPredictions, setPredictionPredictions] = useState<PredictionPrediction[]>([]);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [actualResults] = useState<{ matchId: string; homeScore: number; awayScore: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -149,6 +154,10 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       });
       setKnockoutPredictions(formattedKnockout);
 
+      // Load prediction predictions
+      const predPreds = await SupabaseService.getPredictionPredictions(userId);
+      setPredictionPredictions(predPreds);
+
     } catch (error) {
       console.error('Error loading user data:', error);
     }
@@ -204,6 +213,60 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
 
     } catch (error) {
       console.error('Error saving knockout prediction:', error);
+    }
+  }, [currentUser, isAuthenticated]);
+
+  const setPredictionPrediction = useCallback(async (predictedUserId: string, matchId: string, homeScore: number, awayScore: number) => {
+    if (!currentUser || !isAuthenticated || currentUser.userId === predictedUserId) return;
+
+    try {
+      // Save to Supabase
+      const newPredPred = await SupabaseService.upsertPredictionPrediction(
+        currentUser.userId,
+        predictedUserId,
+        matchId,
+        homeScore,
+        awayScore
+      );
+
+      // Update local state
+      setPredictionPredictions(prev => {
+        const existing = prev.findIndex(p => 
+          p.predictor_user_id === currentUser.userId && 
+          p.predicted_user_id === predictedUserId && 
+          p.match_id === matchId
+        );
+        if (existing >= 0) {
+          const updated = [...prev];
+          updated[existing] = newPredPred;
+          return updated;
+        }
+        return [...prev, newPredPred];
+      });
+
+    } catch (error) {
+      console.error('Error saving prediction prediction:', error);
+    }
+  }, [currentUser, isAuthenticated]);
+
+  const deletePredictionPrediction = useCallback(async (predictedUserId: string, matchId: string) => {
+    if (!currentUser || !isAuthenticated) return;
+
+    try {
+      // Delete from Supabase
+      await SupabaseService.deletePredictionPrediction(currentUser.userId, predictedUserId, matchId);
+
+      // Update local state
+      setPredictionPredictions(prev => 
+        prev.filter(p => 
+          !(p.predictor_user_id === currentUser.userId && 
+            p.predicted_user_id === predictedUserId && 
+            p.match_id === matchId)
+        )
+      );
+
+    } catch (error) {
+      console.error('Error deleting prediction prediction:', error);
     }
   }, [currentUser, isAuthenticated]);
 
@@ -276,6 +339,34 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
     }, 0);
   }, [predictions, actualResults]);
 
+  const getPointsBreakdown = useCallback(() => {
+    if (!currentUser) return { total: 0, exact: 0, margin: 0, result: 0, prediction: 0 };
+    
+    // Calculate breakdown based on predictions and actual results
+    let exact = 0, margin = 0, result = 0, prediction = 0;
+    
+    predictions.forEach(pred => {
+      const actual = actualResults.find(r => r.matchId === pred.matchId);
+      if (actual) {
+        const breakdown = calculatePointsWithBreakdown(pred, actual);
+        if (breakdown.breakdown.exactScore) exact++;
+        else if (breakdown.breakdown.correctMargin) margin++;
+        else if (breakdown.breakdown.correctResult) result++;
+      }
+    });
+    
+    // Count prediction predictions
+    prediction = predictionPredictions.length;
+    
+    return {
+      total: getTotalPoints(),
+      exact,
+      margin,
+      result,
+      prediction
+    };
+  }, [currentUser, predictions, actualResults, predictionPredictions, getTotalPoints]);
+
   const getLeaderboard = useCallback(async (leagueId?: string): Promise<UserPredictions[]> => {
     if (!isAuthenticated || !currentUser) {
       // Return mock data for demo
@@ -335,17 +426,21 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
         currentUser,
         predictions,
         knockoutPredictions,
+        predictionPredictions,
         leagues,
         actualResults,
         isLoading,
         isAuthenticated,
         setPrediction,
         setKnockoutPrediction,
+        setPredictionPrediction,
+        deletePredictionPrediction,
         createLeague,
         joinLeague,
         updateUserName,
         getLeaderboard,
         getTotalPoints,
+        getPointsBreakdown,
         signIn,
         signUp,
         signOut,

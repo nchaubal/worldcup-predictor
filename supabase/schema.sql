@@ -74,9 +74,25 @@ CREATE TABLE IF NOT EXISTS user_points (
   league_id UUID REFERENCES leagues(id) ON DELETE CASCADE,
   total_points INTEGER DEFAULT 0,
   exact_predictions INTEGER DEFAULT 0,
+  margin_predictions INTEGER DEFAULT 0,
   result_predictions INTEGER DEFAULT 0,
+  prediction_predictions INTEGER DEFAULT 0,
   last_calculated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(user_id, league_id)
+);
+
+-- Prediction predictions (users predicting other users' predictions)
+CREATE TABLE IF NOT EXISTS prediction_predictions (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  predictor_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  predicted_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  match_id TEXT NOT NULL,
+  predicted_home_score INTEGER NOT NULL,
+  predicted_away_score INTEGER NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(predictor_user_id, predicted_user_id, match_id),
+  CHECK(predictor_user_id != predicted_user_id)
 );
 
 -- Functions for automatic timestamp updates
@@ -101,27 +117,39 @@ CREATE TRIGGER update_group_predictions_updated_at BEFORE UPDATE ON group_predic
 CREATE TRIGGER update_knockout_predictions_updated_at BEFORE UPDATE ON knockout_predictions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_prediction_predictions_updated_at BEFORE UPDATE ON prediction_predictions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Function to calculate user points
 CREATE OR REPLACE FUNCTION calculate_user_points(p_user_id UUID, p_league_id UUID)
 RETURNS INTEGER AS $$
 DECLARE
     total_points INTEGER := 0;
     exact_count INTEGER := 0;
+    margin_count INTEGER := 0;
     result_count INTEGER := 0;
+    prediction_count INTEGER := 0;
 BEGIN
     -- Calculate points from group predictions
     SELECT 
         COALESCE(SUM(
             CASE 
-                WHEN mr.home_score = gp.home_score AND mr.away_score = gp.away_score THEN 3
+                -- Exact score: 5 points
+                WHEN mr.home_score = gp.home_score AND mr.away_score = gp.away_score THEN 5
+                -- Correct margin: 2 points
+                WHEN (mr.home_score - mr.away_score) = (gp.home_score - gp.away_score) THEN 2
+                -- Correct result only: 1 point
                 WHEN SIGN(mr.home_score - mr.away_score) = SIGN(gp.home_score - gp.away_score) THEN 1
                 ELSE 0
             END
         ), 0),
         COALESCE(SUM(CASE WHEN mr.home_score = gp.home_score AND mr.away_score = gp.away_score THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN (mr.home_score - mr.away_score) = (gp.home_score - gp.away_score)
+                         AND NOT (mr.home_score = gp.home_score AND mr.away_score = gp.away_score) THEN 1 ELSE 0 END), 0),
         COALESCE(SUM(CASE WHEN SIGN(mr.home_score - mr.away_score) = SIGN(gp.home_score - gp.away_score) 
-                         AND NOT (mr.home_score = gp.home_score AND mr.away_score = gp.away_score) THEN 1 ELSE 0 END), 0)
-    INTO total_points, exact_count, result_count
+                         AND NOT (mr.home_score = gp.home_score AND mr.away_score = gp.away_score)
+                         AND NOT ((mr.home_score - mr.away_score) = (gp.home_score - gp.away_score)) THEN 1 ELSE 0 END), 0)
+    INTO total_points, exact_count, margin_count, result_count
     FROM group_predictions gp
     LEFT JOIN match_results mr ON gp.match_id = mr.match_id
     WHERE gp.user_id = p_user_id AND mr.completed_at IS NOT NULL;
@@ -139,14 +167,30 @@ BEGIN
     LEFT JOIN match_results mr ON kp.match_id = mr.match_id
     WHERE kp.user_id = p_user_id AND mr.completed_at IS NOT NULL;
     
+    -- Calculate points from predicting other users' predictions (3 points per correct prediction)
+    SELECT 
+        COALESCE(total_points, 0) + COALESCE(SUM(
+            CASE 
+                WHEN pp.predicted_home_score = gp.home_score AND pp.predicted_away_score = gp.away_score THEN 3
+                ELSE 0
+            END
+        ), 0),
+        COALESCE(SUM(CASE WHEN pp.predicted_home_score = gp.home_score AND pp.predicted_away_score = gp.away_score THEN 1 ELSE 0 END), 0)
+    INTO total_points, prediction_count
+    FROM prediction_predictions pp
+    INNER JOIN group_predictions gp ON pp.predicted_user_id = gp.user_id AND pp.match_id = gp.match_id
+    WHERE pp.predictor_user_id = p_user_id;
+    
     -- Update user points table
-    INSERT INTO user_points (user_id, league_id, total_points, exact_predictions, result_predictions, last_calculated_at)
-    VALUES (p_user_id, p_league_id, total_points, exact_count, result_count, NOW())
+    INSERT INTO user_points (user_id, league_id, total_points, exact_predictions, margin_predictions, result_predictions, prediction_predictions, last_calculated_at)
+    VALUES (p_user_id, p_league_id, total_points, exact_count, margin_count, result_count, prediction_count, NOW())
     ON CONFLICT (user_id, league_id)
     DO UPDATE SET 
         total_points = EXCLUDED.total_points,
         exact_predictions = EXCLUDED.exact_predictions,
+        margin_predictions = EXCLUDED.margin_predictions,
         result_predictions = EXCLUDED.result_predictions,
+        prediction_predictions = EXCLUDED.prediction_predictions,
         last_calculated_at = EXCLUDED.last_calculated_at;
     
     RETURN total_points;
@@ -159,6 +203,7 @@ ALTER TABLE leagues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE league_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_predictions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE knockout_predictions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prediction_predictions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_points ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
@@ -204,6 +249,22 @@ CREATE POLICY "Users can view own league points" ON user_points
         )
     );
 
+-- Users can manage their own prediction predictions
+CREATE POLICY "Users can manage own prediction predictions" ON prediction_predictions
+    FOR ALL USING (auth.uid() = predictor_user_id);
+
+-- Users can view prediction predictions for their league
+CREATE POLICY "Users can view league prediction predictions" ON prediction_predictions
+    FOR SELECT USING (
+        predictor_user_id = auth.uid() OR 
+        predictor_user_id IN (
+            SELECT user_id FROM league_members 
+            WHERE league_id IN (
+                SELECT league_id FROM league_members WHERE user_id = auth.uid()
+            )
+        )
+    );
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_leagues_code ON leagues(code);
 CREATE INDEX IF NOT EXISTS idx_league_members_league ON league_members(league_id);
@@ -215,3 +276,6 @@ CREATE INDEX IF NOT EXISTS idx_knockout_predictions_match ON knockout_prediction
 CREATE INDEX IF NOT EXISTS idx_user_points_league ON user_points(league_id);
 CREATE INDEX IF NOT EXISTS idx_user_points_user ON user_points(user_id);
 CREATE INDEX IF NOT EXISTS idx_match_results_match ON match_results(match_id);
+CREATE INDEX IF NOT EXISTS idx_prediction_predictions_predictor ON prediction_predictions(predictor_user_id);
+CREATE INDEX IF NOT EXISTS idx_prediction_predictions_predicted ON prediction_predictions(predicted_user_id);
+CREATE INDEX IF NOT EXISTS idx_prediction_predictions_match ON prediction_predictions(match_id);

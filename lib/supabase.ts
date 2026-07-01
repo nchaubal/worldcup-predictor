@@ -68,13 +68,26 @@ export interface UserPoints {
   league_id: string;
   total_points: number;
   exact_predictions: number;
+  margin_predictions: number;
   result_predictions: number;
+  prediction_predictions: number;
   last_calculated_at: string;
   profiles: {
     id: string;
     username: string;
     avatar: string;
   };
+}
+
+export interface PredictionPrediction {
+  id: string;
+  predictor_user_id: string;
+  predicted_user_id: string;
+  match_id: string;
+  predicted_home_score: number;
+  predicted_away_score: number;
+  created_at: string;
+  updated_at: string;
 }
 
 // Helper functions for database operations
@@ -315,5 +328,68 @@ export class SupabaseService {
   static onAuthStateChange(callback: (event: string, session: any) => void) {
     this.checkSupabase();
     return supabase!.auth.onAuthStateChange(callback);
+  }
+
+  // Prediction predictions operations
+  static async getPredictionPredictions(predictorUserId: string): Promise<PredictionPrediction[]> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('prediction_predictions')
+      .select('*')
+      .eq('predictor_user_id', predictorUserId);
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async upsertPredictionPrediction(
+    predictorUserId: string,
+    predictedUserId: string,
+    matchId: string,
+    homeScore: number,
+    awayScore: number
+  ): Promise<PredictionPrediction> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('prediction_predictions')
+      .upsert({
+        predictor_user_id: predictorUserId,
+        predicted_user_id: predictedUserId,
+        match_id: matchId,
+        predicted_home_score: homeScore,
+        predicted_away_score: awayScore
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  static async deletePredictionPrediction(
+    predictorUserId: string,
+    predictedUserId: string,
+    matchId: string
+  ): Promise<void> {
+    this.checkSupabase();
+    const { error } = await supabase!
+      .from('prediction_predictions')
+      .delete()
+      .eq('predictor_user_id', predictorUserId)
+      .eq('predicted_user_id', predictedUserId)
+      .eq('match_id', matchId);
+    
+    if (error) throw error;
+  }
+
+  static async getPredictionsForUser(predictedUserId: string): Promise<PredictionPrediction[]> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('prediction_predictions')
+      .select('*')
+      .eq('predicted_user_id', predictedUserId);
+    
+    if (error) throw error;
+    return data || [];
   }
 }
