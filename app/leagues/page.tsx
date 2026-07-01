@@ -1,39 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useTournament } from "@/context/TournamentContext";
+import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
+import { UserPredictions } from "@/lib/tournament-data";
 import { Users, Plus, LogIn, Trophy, Medal, Copy, CheckCheck } from "lucide-react";
 
 export default function LeaguesPage() {
-  const { leagues, currentUser, createLeague, joinLeague, getLeaderboard } = useTournament();
+  const { leagues, currentUser, createLeague, joinLeague, getLeaderboard, isLoading, isAuthenticated } = useTournamentSupabase();
   const [newLeagueName, setNewLeagueName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [activeLeague, setActiveLeague] = useState("global");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newLeagueName.trim()) return;
-    const league = createLeague(newLeagueName.trim());
-    setMessage({ type: "success", text: `League "${league.name}" created! Code: ${league.code}` });
-    setNewLeagueName("");
-    setActiveLeague(league.id);
+    try {
+      const league = await createLeague(newLeagueName.trim());
+      setMessage({ type: "success", text: `League "${league.name}" created! Code: ${league.code}` });
+      setNewLeagueName("");
+      setActiveLeague(league.id);
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to create league. Please try again." });
+    }
   };
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!joinCode.trim()) return;
-    const league = joinLeague(joinCode.trim());
-    if (league) {
-      setMessage({ type: "success", text: `Joined "${league.name}"!` });
-      setJoinCode("");
-      setActiveLeague(league.id);
-    } else {
-      setMessage({ type: "error", text: "League not found. Check the code and try again." });
+    try {
+      const league = await joinLeague(joinCode.trim());
+      if (league) {
+        setMessage({ type: "success", text: `Joined "${league.name}"!` });
+        setJoinCode("");
+        setActiveLeague(league.id);
+      } else {
+        setMessage({ type: "error", text: "League not found. Check the code and try again." });
+      }
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to join league. Please try again." });
     }
   };
 
@@ -43,8 +52,18 @@ export default function LeaguesPage() {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const leaderboard = getLeaderboard(activeLeague);
+  const [leaderboard, setLeaderboard] = useState<UserPredictions[]>([]);
   const currentLeague = leagues.find((l) => l.id === activeLeague);
+
+  useEffect(() => {
+    const loadLeaderboard = async () => {
+      if (activeLeague) {
+        const data = await getLeaderboard(activeLeague);
+        setLeaderboard(data);
+      }
+    };
+    loadLeaderboard();
+  }, [activeLeague, getLeaderboard]);
 
   const medalColors = [
     "text-yellow-500",
@@ -127,27 +146,76 @@ export default function LeaguesPage() {
         </Card>
       </div>
 
-      <div className="mb-6">
-        <h2 className="text-lg font-bold mb-3">Your Leagues</h2>
-        <div className="flex flex-wrap gap-2">
-          {leagues.map((league) => (
-            <button
-              key={league.id}
-              onClick={() => setActiveLeague(league.id)}
-              className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-all ${
-                activeLeague === league.id
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border hover:border-primary/50"
-              }`}
-            >
-              {league.name}
-              <Badge variant="secondary" className="text-xs">{league.members.length}</Badge>
-            </button>
-          ))}
+      {leagues.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-lg font-bold mb-3">Your Leagues</h2>
+          <div className="flex flex-wrap gap-2">
+            {leagues.map((league) => (
+              <button
+                key={league.id}
+                onClick={() => setActiveLeague(league.id)}
+                className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-all ${
+                  activeLeague === league.id
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border hover:border-primary/50"
+                }`}
+              >
+                {league.name}
+                <Badge variant="secondary" className="text-xs">{league.members.length}</Badge>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {currentLeague && (
+      {leagues.length === 0 ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-yellow-500" />
+              Your Stats
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {leaderboard.map((user, idx) => {
+                const isMe = currentUser?.userId === user.userId;
+                return (
+                  <div
+                    key={user.userId}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-3 ${
+                      isMe ? "bg-primary/8 ring-1 ring-primary/25" : "hover:bg-accent/40"
+                    }`}
+                  >
+                    <div className={`w-8 text-center font-bold text-lg ${medalColors[idx] ?? "text-muted-foreground"}`}>
+                      <Medal className="h-5 w-5 mx-auto" />
+                    </div>
+                    <div className="text-2xl">{user.avatar}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium flex items-center gap-2">
+                        {user.userName}
+                        {isMe && <Badge variant="secondary" className="text-xs">You</Badge>}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {user.predictions?.length ?? 0} predictions made
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold">{user.totalPoints}</div>
+                      <div className="text-xs text-muted-foreground">pts</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {leaderboard[0]?.predictions?.length === 0 && (
+              <div className="mt-4 text-center text-sm text-muted-foreground">
+                Create or join a league to compete with friends!
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : currentLeague && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -172,7 +240,7 @@ export default function LeaguesPage() {
           <CardContent>
             <div className="space-y-2">
               {leaderboard.map((user, idx) => {
-                const isMe = user.userId === currentUser.userId;
+                const isMe = currentUser?.userId === user.userId;
                 return (
                   <div
                     key={user.userId}

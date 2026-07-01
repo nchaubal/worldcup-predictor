@@ -111,7 +111,7 @@ describe('HomePage Integration', () => {
   it('renders hero section with main content', () => {
     render(<HomePage />)
     
-    expect(screen.getByText('FIFA World Cup')).toBeInTheDocument()
+    expect(screen.getByText(/Boom FIFA World Cup/)).toBeInTheDocument()
     expect(screen.getByText('2026™')).toBeInTheDocument()
     expect(screen.getByText('Predictor')).toBeInTheDocument()
     expect(screen.getByText(/48 teams. 104 matches. 3 nations hosting./)).toBeInTheDocument()

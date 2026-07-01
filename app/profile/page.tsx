@@ -7,16 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { useTournament } from "@/context/TournamentContext";
+import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 import { GROUP_MATCHES, KNOCKOUT_MATCHES, TEAMS } from "@/lib/tournament-data";
 import { User, Edit2, Check, Star, BarChart3, Target } from "lucide-react";
 
 const AVATAR_OPTIONS = ["⚽", "🏆", "🎯", "🌟", "🔥", "🦁", "🐯", "🦊", "🦅", "🤖"];
 
 export default function ProfilePage() {
-  const { currentUser, predictions, knockoutPredictions, getTotalPoints, updateUserName } = useTournament();
+  const { currentUser, predictions, knockoutPredictions, getTotalPoints, getPointsBreakdown, updateUserName } = useTournamentSupabase();
   const [editingName, setEditingName] = useState(false);
-  const [nameInput, setNameInput] = useState(currentUser.userName);
+  const [nameInput, setNameInput] = useState(currentUser?.userName || "");
 
   const totalGroupMatches = GROUP_MATCHES.length;
   const totalKnockoutPicks = Object.keys(knockoutPredictions).length;
@@ -25,6 +25,7 @@ export default function ProfilePage() {
 
   const groupProgress = Math.round((predictedCount / totalGroupMatches) * 100);
   const knockoutProgress = Math.round((totalKnockoutPicks / 15) * 100);
+  const pointsBreakdown = getPointsBreakdown();
 
   const saveName = () => {
     if (nameInput.trim()) {
@@ -65,7 +66,7 @@ export default function ProfilePage() {
       <div className="grid sm:grid-cols-3 gap-6 mb-8">
         <Card className="sm:col-span-1">
           <CardContent className="pt-6 pb-6 text-center">
-            <div className="text-6xl mb-3">{currentUser.avatar}</div>
+            <div className="text-6xl mb-3">{currentUser?.avatar || "⚽"}</div>
             {editingName ? (
               <div className="flex gap-2">
                 <Input
@@ -81,7 +82,7 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="flex items-center justify-center gap-2">
-                <span className="text-xl font-bold">{currentUser.userName}</span>
+                <span className="text-xl font-bold">{currentUser?.userName || "Guest"}</span>
                 <button onClick={() => setEditingName(true)} className="text-muted-foreground hover:text-foreground transition-colors">
                   <Edit2 className="h-4 w-4" />
                 </button>
@@ -127,6 +128,40 @@ export default function ProfilePage() {
                   <span className="text-muted-foreground">{totalKnockoutPicks}/15</span>
                 </div>
                 <Progress value={knockoutProgress} className="h-2" />
+              </div>
+            </div>
+            <Separator />
+            <div className="space-y-3">
+              <div className="text-sm font-medium text-muted-foreground">Points Breakdown</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div>
+                    <div className="text-lg font-bold">{pointsBreakdown.exact}</div>
+                    <div className="text-xs text-muted-foreground">Exact scores (5 pts)</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <div>
+                    <div className="text-lg font-bold">{pointsBreakdown.margin}</div>
+                    <div className="text-xs text-muted-foreground">Correct margins (2 pts)</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <div>
+                    <div className="text-lg font-bold">{pointsBreakdown.result}</div>
+                    <div className="text-xs text-muted-foreground">Correct results (1 pt)</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                  <div>
+                    <div className="text-lg font-bold">{pointsBreakdown.prediction}</div>
+                    <div className="text-xs text-muted-foreground">Prediction predictions (3 pts)</div>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>

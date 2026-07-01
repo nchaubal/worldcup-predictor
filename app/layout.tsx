@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
-import { TournamentProvider } from "@/context/TournamentContext";
+import { TournamentProviderSupabase } from "@/context/TournamentContextSupabase";
 import Navbar from "@/components/Navbar";
 
 const geist = Geist({
@@ -22,10 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <TournamentProvider>
+        <TournamentProviderSupabase>
           <Navbar />
           <main className="flex-1">{children}</main>
-        </TournamentProvider>
+        </TournamentProviderSupabase>
       </body>
     </html>
   );

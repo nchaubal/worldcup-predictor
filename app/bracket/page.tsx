@@ -2,9 +2,10 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { useTournament } from "@/context/TournamentContext";
+import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 import { TEAMS, Team, R32_MATCHES } from "@/lib/tournament-data";
 import { predictMatch } from "@/lib/ai-predictor";
+import { useFIFAScores } from "@/hooks/useFIFAScores";
 import { GitBranch, Brain, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -197,7 +198,9 @@ function Col({ matches, picks, onPick, showAI }: {
 // Main page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function BracketPage() {
-  const { setKnockoutPrediction, knockoutPredictions } = useTournament();
+  const { setKnockoutPrediction, knockoutPredictions } = useTournamentSupabase();
+  const { matches: fifaMatches, getLiveMatches } = useFIFAScores();
+  const liveFIFAMatches = getLiveMatches();
   const [picks, setPicks]         = useState<Record<string, string>>({});
 
   // knockoutPredictions loads asynchronously from Supabase after auth
@@ -263,9 +266,42 @@ export default function BracketPage() {
   // R32 → MatchDef lookup by id
   const r32ById = (id: string): MatchDef => {
     const m = R32_MATCHES.find(x => x.id === id)!;
-    return { id: m.id, teamAId: m.homeTeamId, teamBId: m.awayTeamId,
-      winnerId: m.winner ?? null, scoreA: m.homeScore, scoreB: m.awayScore,
-      pens: m.pens, status: m.status, venue: m.venue };
+    
+    // Check if this match has live FIFA data
+    const homeTeam = TEAMS.find(t => t.id === m.homeTeamId);
+    const awayTeam = TEAMS.find(t => t.id === m.awayTeamId);
+    const liveFIFAMatch = liveFIFAMatches.find(fifaMatch => 
+      (fifaMatch.homeTeam.name === homeTeam?.name && fifaMatch.awayTeam.name === awayTeam?.name) ||
+      (fifaMatch.homeTeam.name === awayTeam?.name && fifaMatch.awayTeam.name === homeTeam?.name)
+    );
+    
+    // If live FIFA match exists, use its data
+    if (liveFIFAMatch) {
+      return { 
+        id: m.id, 
+        teamAId: m.homeTeamId, 
+        teamBId: m.awayTeamId,
+        winnerId: null, // Live matches have no winner yet
+        scoreA: liveFIFAMatch.homeTeam.score, 
+        scoreB: liveFIFAMatch.awayTeam.score,
+        pens: undefined, 
+        status: 'live', 
+        venue: `${liveFIFAMatch.venue}, ${liveFIFAMatch.city}` 
+      };
+    }
+    
+    // Otherwise use original data
+    return { 
+      id: m.id, 
+      teamAId: m.homeTeamId, 
+      teamBId: m.awayTeamId,
+      winnerId: m.winner ?? null, 
+      scoreA: m.homeScore, 
+      scoreB: m.awayScore,
+      pens: m.pens, 
+      status: m.status, 
+      venue: m.venue 
+    };
   };
 
   // ── Correct R16 source pairs (from R16_MATCHES data):

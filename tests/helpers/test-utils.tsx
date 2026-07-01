@@ -1,13 +1,19 @@
 import { ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
 import { TournamentProvider } from '@/context/TournamentContext'
+import { TournamentProviderSupabase } from '@/context/TournamentContextSupabase'
 
-// Custom render function with providers
+// Custom render function with providers. Nests both contexts since some
+// components (e.g. MatchPredictionCard) still read the original mock-data
+// TournamentContext, while others (e.g. AuthButton) read the Supabase-backed
+// TournamentContextSupabase.
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   return (
-    <TournamentProvider>
-      {children}
-    </TournamentProvider>
+    <TournamentProviderSupabase>
+      <TournamentProvider>
+        {children}
+      </TournamentProvider>
+    </TournamentProviderSupabase>
   )
 }
 

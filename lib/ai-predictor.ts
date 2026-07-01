@@ -50,13 +50,93 @@ export function predictMatch(homeTeam: Team, awayTeam: Team): MatchProbability {
 }
 
 export function calculatePoints(prediction: { homeScore: number; awayScore: number }, actual: { homeScore: number; awayScore: number }): number {
+  // Exact score prediction: 5 points (increased from 3)
   if (prediction.homeScore === actual.homeScore && prediction.awayScore === actual.awayScore) {
-    return 3;
+    return 5;
   }
+  
+  // Check for correct win margin: 2 points
+  const predMargin = prediction.homeScore - prediction.awayScore;
+  const actualMargin = actual.homeScore - actual.awayScore;
+  if (predMargin === actualMargin) {
+    return 2;
+  }
+  
+  // Correct result only: 1 point
   const predResult = Math.sign(prediction.homeScore - prediction.awayScore);
   const actualResult = Math.sign(actual.homeScore - actual.awayScore);
   if (predResult === actualResult) {
     return 1;
   }
+  
   return 0;
+}
+
+export function calculatePointsWithBreakdown(prediction: { homeScore: number; awayScore: number }, actual: { homeScore: number; awayScore: number }): {
+  totalPoints: number;
+  breakdown: {
+    exactScore: boolean;
+    correctMargin: boolean;
+    correctResult: boolean;
+    points: number;
+    reason: string;
+  };
+} {
+  // Exact score prediction: 5 points
+  if (prediction.homeScore === actual.homeScore && prediction.awayScore === actual.awayScore) {
+    return {
+      totalPoints: 5,
+      breakdown: {
+        exactScore: true,
+        correctMargin: true,
+        correctResult: true,
+        points: 5,
+        reason: "Exact score prediction"
+      }
+    };
+  }
+  
+  // Check for correct win margin: 2 points
+  const predMargin = prediction.homeScore - prediction.awayScore;
+  const actualMargin = actual.homeScore - actual.awayScore;
+  if (predMargin === actualMargin) {
+    return {
+      totalPoints: 2,
+      breakdown: {
+        exactScore: false,
+        correctMargin: true,
+        correctResult: true,
+        points: 2,
+        reason: "Correct win margin"
+      }
+    };
+  }
+  
+  // Correct result only: 1 point
+  const predResult = Math.sign(prediction.homeScore - prediction.awayScore);
+  const actualResult = Math.sign(actual.homeScore - actual.awayScore);
+  if (predResult === actualResult) {
+    return {
+      totalPoints: 1,
+      breakdown: {
+        exactScore: false,
+        correctMargin: false,
+        correctResult: true,
+        points: 1,
+        reason: "Correct result only"
+      }
+    };
+  }
+  
+  // No points
+  return {
+    totalPoints: 0,
+    breakdown: {
+      exactScore: false,
+      correctMargin: false,
+      correctResult: false,
+      points: 0,
+      reason: "Incorrect prediction"
+    }
+  };
 }

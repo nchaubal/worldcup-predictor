@@ -2,28 +2,21 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Trophy, LayoutGrid, GitBranch, Users, User, LogOut } from "lucide-react";
-import { useTournament } from "@/context/TournamentContext";
-import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
+import { Trophy, LayoutGrid, GitBranch, Users, User, BarChart3 } from "lucide-react";
+import { AuthButton } from "./AuthButton";
 
 const NAV_LINKS = [
   { href: "/",        label: "Home",    icon: Trophy },
   { href: "/predict", label: "Predict", icon: LayoutGrid },
   { href: "/bracket", label: "Bracket", icon: GitBranch },
   { href: "/leagues", label: "Leagues", icon: Users },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { authUser, authLoading, currentUser, logout } = useTournament();
-
-  const handleLogout = async () => {
-    await logout();
-    router.push("/");
-  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-card/90 backdrop-blur-md">
@@ -64,30 +57,10 @@ export default function Navbar() {
                 </Link>
               );
             })}
+            <div className="ml-4 pl-4 border-l border-border">
+              <AuthButton />
+            </div>
           </nav>
-
-          <div className="flex items-center gap-2">
-            {authLoading ? null : authUser ? (
-              <>
-                <span className="hidden sm:block text-sm text-muted-foreground">
-                  {currentUser.avatar} {currentUser.userName}
-                </span>
-                <Button type="button" variant="ghost" size="sm" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4" />
-                  <span className="hidden md:block">Log out</span>
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost" size="sm">Log in</Button>
-                </Link>
-                <Link href="/signup">
-                  <Button size="sm">Sign up</Button>
-                </Link>
-              </>
-            )}
-          </div>
         </div>
       </div>
     </header>
