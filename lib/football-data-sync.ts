@@ -75,28 +75,37 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
 
 // Sync all tournament rounds with Football Data
 export function syncTournamentWithFootballData(footballMatches: FootballDataMatch[]) {
+  // Get all matches from API and convert them to our format
+  const allApiMatches = footballMatches.map(convertFootballDataToTournamentMatch).filter((match): match is TournamentMatch => match !== null);
+  
+  // Sync R32 matches with our static data
+  const syncedR32 = R32_MATCHES.map(match => syncMatchWithFootballData(match, footballMatches));
+  
+  // Combine all matches
+  const allMatches = [...syncedR32, ...allApiMatches.filter(m => !m.id.startsWith('r32_'))];
+  
   return {
-    r32: R32_MATCHES.map(match => syncMatchWithFootballData(match, footballMatches)),
-    // Future rounds will be added when data is available
+    r32: syncedR32,
+    all: allMatches,
   };
 }
 
 // Get live matches from tournament data
 export function getLiveTournamentMatches(footballMatches: FootballDataMatch[]) {
   const synced = syncTournamentWithFootballData(footballMatches);
-  return synced.r32.filter(match => match.status === 'live');
+  return synced.all.filter(match => match.status === 'live');
 }
 
 // Get completed matches from tournament data
 export function getCompletedTournamentMatches(footballMatches: FootballDataMatch[]) {
   const synced = syncTournamentWithFootballData(footballMatches);
-  return synced.r32.filter(match => match.status === 'completed');
+  return synced.all.filter(match => match.status === 'completed');
 }
 
 // Get upcoming matches from tournament data
 export function getUpcomingTournamentMatches(footballMatches: FootballDataMatch[]) {
   const synced = syncTournamentWithFootballData(footballMatches);
-  return synced.r32.filter(match => match.status === 'upcoming');
+  return synced.all.filter(match => match.status === 'upcoming');
 }
 
 // Convert Football Data match to our tournament match format

@@ -38,9 +38,9 @@ export default function HomePage() {
   
   // Use dynamic sync system to get real-time match data
   const syncedTournament = syncTournamentWithFootballData(footballMatches);
-  const completedMatches = getCompletedTournamentMatches(footballMatches).filter(m => m.id.startsWith('r32_'));
-  const liveMatches = getLiveTournamentMatches(footballMatches).filter(m => m.id.startsWith('r32_'));
-  const upcomingMatches = getUpcomingTournamentMatches(footballMatches).filter(m => m.id.startsWith('r32_'));
+  const completedMatches = getCompletedTournamentMatches(footballMatches);
+  const liveMatches = getLiveTournamentMatches(footballMatches);
+  const upcomingMatches = getUpcomingTournamentMatches(footballMatches);
   const featuredGroups    = ["I", "J", "C", "L"]; // France, Argentina, Brazil, England groups
 
   return (
@@ -155,12 +155,26 @@ export default function HomePage() {
           )}
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[...completedMatches, ...upcomingMatches.slice(0, 6)].map((m) => {
-              const home = getTeamById(m.homeTeamId)!;
-              const away = getTeamById(m.awayTeamId)!;
+            {[...completedMatches.slice(0, 6), ...upcomingMatches.slice(0, 3)].map((m) => {
+              // Handle both static matches (with teamId) and API matches (with team names)
+              let homeTeam, awayTeam;
+              
+              if (m.homeTeamId && m.awayTeamId) {
+                // Static match format
+                homeTeam = getTeamById(m.homeTeamId)!;
+                awayTeam = getTeamById(m.awayTeamId)!;
+              } else {
+                // API match format - extract from match ID or use fallback
+                const homeTeamName = m.id.split('-')[0];
+                const awayTeamName = m.id.split('-')[1];
+                homeTeam = getTeamById(homeTeamName) || { name: homeTeamName, flag: '🏳️', id: homeTeamName };
+                awayTeam = getTeamById(awayTeamName) || { name: awayTeamName, flag: '🏳️', id: awayTeamName };
+              }
+              
               const isCompleted = m.status === "completed";
-              const homeWon = m.winner === m.homeTeamId;
-              const awayWon = m.winner === m.awayTeamId;
+              const homeWon = m.winner === (m.homeTeamId || homeTeam.id);
+              const awayWon = m.winner === (m.awayTeamId || awayTeam.id);
+              
               return (
                 <Card key={m.id} className={`border-border/50 transition-all ${isCompleted ? "opacity-80" : "hover:border-primary/30"}`}>
                   <CardContent className="py-3 px-4">
@@ -176,8 +190,8 @@ export default function HomePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <div className={`flex-1 flex items-center gap-2 ${isCompleted && !homeWon ? "opacity-40" : ""}`}>
-                        <span className="text-xl">{home.flag}</span>
-                        <span className={`text-sm font-semibold ${homeWon ? "text-primary" : ""}`}>{home.name}</span>
+                        <span className="text-xl">{homeTeam.flag}</span>
+                        <span className={`text-sm font-semibold ${homeWon ? "text-primary" : ""}`}>{homeTeam.name}</span>
                       </div>
                       <div className="shrink-0 text-center min-w-[3rem]">
                         {isCompleted ? (
@@ -192,8 +206,8 @@ export default function HomePage() {
                         {m.pens && <div className="text-[10px] text-muted-foreground">pens {m.pens}</div>}
                       </div>
                       <div className={`flex-1 flex items-center justify-end gap-2 ${isCompleted && !awayWon ? "opacity-40" : ""}`}>
-                        <span className={`text-sm font-semibold ${awayWon ? "text-primary" : ""}`}>{away.name}</span>
-                        <span className="text-xl">{away.flag}</span>
+                        <span className={`text-sm font-semibold ${awayWon ? "text-primary" : ""}`}>{awayTeam.name}</span>
+                        <span className="text-xl">{awayTeam.flag}</span>
                       </div>
                     </div>
                   </CardContent>
