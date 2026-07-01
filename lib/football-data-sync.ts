@@ -28,7 +28,8 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
   }
 
   // Helper function to normalize team names for matching
-  const normalizeTeamName = (name: string): string => {
+  const normalizeTeamName = (name?: string | null): string => {
+    if (!name) return '';
     return name.toLowerCase().replace(/\s+(islands|republic)/gi, '').trim();
   };
 
@@ -118,9 +119,15 @@ export function getUpcomingTournamentMatches(footballMatches: FootballDataMatch[
 // Convert Football Data match to our tournament match format
 export function convertFootballDataToTournamentMatch(footballMatch: FootballDataMatch): TournamentMatch | null {
   // Helper function to normalize team names for matching
-  const normalizeTeamName = (name: string): string => {
+  const normalizeTeamName = (name?: string | null): string => {
+    if (!name) return '';
     return name.toLowerCase().replace(/\s+(islands|republic)/gi, '').trim();
   };
+
+  // Knockout matches that aren't set yet have null team names — skip them
+  if (!footballMatch.homeTeam?.name || !footballMatch.awayTeam?.name) {
+    return null;
+  }
 
   // Find team IDs by team names with normalized matching
   const homeTeam = TEAMS.find(t => normalizeTeamName(t.name) === normalizeTeamName(footballMatch.homeTeam.name));
