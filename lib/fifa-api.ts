@@ -162,15 +162,17 @@ class FIFAApiService {
         id: 'fra-aus-2026',
         homeTeam: {
           name: 'France',
-          code: 'FRA'
+          code: 'FRA',
+          score: 2
         },
         awayTeam: {
           name: 'Australia',
-          code: 'AUS'
+          code: 'AUS',
+          score: 0
         },
         competition: 'FIFA World Cup 2026',
-        matchDate: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-        status: 'UPCOMING',
+        matchDate: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+        status: 'FULL_TIME',
         venue: 'MetLife Stadium',
         city: 'East Rutherford, New Jersey, USA',
         group: 'Group D',
@@ -180,54 +182,20 @@ class FIFAApiService {
         id: 'eng-den-2026',
         homeTeam: {
           name: 'England',
-          code: 'ENG'
+          code: 'ENG',
+          score: 1
         },
         awayTeam: {
           name: 'Denmark',
-          code: 'DEN'
+          code: 'DEN',
+          score: 1
         },
         competition: 'FIFA World Cup 2026',
-        matchDate: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-        status: 'UPCOMING',
+        matchDate: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
+        status: 'FULL_TIME',
         venue: 'Levi\'s Stadium',
         city: 'Santa Clara, California, USA',
         group: 'Group C',
-        stage: 'Group Stage'
-      },
-      {
-        id: 'bra-crc-2026',
-        homeTeam: {
-          name: 'Brazil',
-          code: 'BRA'
-        },
-        awayTeam: {
-          name: 'Costa Rica',
-          code: 'CRC'
-        },
-        competition: 'FIFA World Cup 2026',
-        matchDate: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
-        status: 'UPCOMING',
-        venue: 'NRG Stadium',
-        city: 'Houston, Texas, USA',
-        group: 'Group G',
-        stage: 'Group Stage'
-      },
-      {
-        id: 'arg-per-2026',
-        homeTeam: {
-          name: 'Argentina',
-          code: 'ARG'
-        },
-        awayTeam: {
-          name: 'Peru',
-          code: 'PER'
-        },
-        competition: 'FIFA World Cup 2026',
-        matchDate: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
-        status: 'UPCOMING',
-        venue: 'Hard Rock Stadium',
-        city: 'Miami Gardens, Florida, USA',
-        group: 'Group B',
         stage: 'Group Stage'
       }
     ];
