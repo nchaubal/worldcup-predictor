@@ -59,8 +59,8 @@ export const useFootballData = () => {
       
       setMatches(matchesWithDetails);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch live matches');
-      console.error('Error fetching live matches:', err);
+      // Don't set error when using fallback data
+      console.error('Error fetching live matches (using fallback):', err);
     } finally {
       setLoading(false);
     }
@@ -100,8 +100,8 @@ export const useFootballData = () => {
       
       setMatches(matchesWithDetails);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch matches');
-      console.error('Error fetching matches:', err);
+      // Don't set error when using fallback data
+      console.error('Error fetching matches (using fallback):', err);
     } finally {
       setLoading(false);
     }
@@ -123,8 +123,8 @@ export const useFootballData = () => {
       
       return matchWithDetails;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch match');
-      console.error('Error fetching match:', err);
+      // Don't set error when using fallback data
+      console.error('Error fetching match (using fallback):', err);
       throw err;
     } finally {
       setLoading(false);
