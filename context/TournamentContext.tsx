@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { Prediction, UserPredictions, League, GROUP_MATCHES, KNOCKOUT_MATCHES, Match, Team } from "@/lib/tournament-data";
 import { calculatePoints } from "@/lib/ai-predictor";
+import { MOCK_USERS, MOCK_LEAGUE, generateMockPredictions } from "@/lib/mock-data";
 
 type ActualResult = {
   matchId: string;
@@ -40,7 +41,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserPredictions>(defaultUser);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [knockoutPredictions, setKnockoutPredictions] = useState<{ [matchId: string]: string }>({});
-  const [leagues, setLeagues] = useState<League[]>([]);
+  const [leagues, setLeagues] = useState<League[]>([MOCK_LEAGUE]);
   const [actualResults] = useState<ActualResult[]>([]);
 
   const setPrediction = useCallback((matchId: string, homeScore: number, awayScore: number) => {

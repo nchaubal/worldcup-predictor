@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Trophy, LayoutGrid, GitBranch, Users, User } from "lucide-react";
+import { Trophy, LayoutGrid, GitBranch, Users, User, BarChart3 } from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/",        label: "Home",    icon: Trophy },
   { href: "/predict", label: "Predict", icon: LayoutGrid },
   { href: "/bracket", label: "Bracket", icon: GitBranch },
   { href: "/leagues", label: "Leagues", icon: Users },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
