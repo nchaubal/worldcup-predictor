@@ -1,7 +1,7 @@
 // Dynamic Tournament Data Sync with FIFA Live Scores
 // Automatically updates match status, scores, and winners based on live FIFA data
 
-import { R32_MATCHES, R16_MATCHES, QF_MATCHES, SF_MATCHES, FINAL_MATCH } from './tournament-data';
+import { R32_MATCHES, R16_MATCHES } from './tournament-data';
 import { FIFAMatch } from './fifa-api';
 import { TEAMS } from './tournament-data';
 
@@ -69,9 +69,7 @@ export function syncTournamentWithFIFA(fifaMatches: FIFAMatch[]) {
   return {
     r32: R32_MATCHES.map(match => syncMatchWithFIFA(match, fifaMatches)),
     r16: R16_MATCHES.map(match => syncMatchWithFIFA(match, fifaMatches)),
-    qf: QF_MATCHES.map(match => syncMatchWithFIFA(match, fifaMatches)),
-    sf: SF_MATCHES.map(match => syncMatchWithFIFA(match, fifaMatches)),
-    final: syncMatchWithFIFA(FINAL_MATCH, fifaMatches)
+    // Future rounds will be added when data is available
   };
 }
 
@@ -80,10 +78,7 @@ export function getLiveTournamentMatches(fifaMatches: FIFAMatch[]) {
   const synced = syncTournamentWithFIFA(fifaMatches);
   const allMatches = [
     ...synced.r32,
-    ...synced.r16,
-    ...synced.qf,
-    ...synced.sf,
-    synced.final
+    ...synced.r16
   ];
   
   return allMatches.filter(match => match.status === 'live');
@@ -94,10 +89,7 @@ export function getCompletedTournamentMatches(fifaMatches: FIFAMatch[]) {
   const synced = syncTournamentWithFIFA(fifaMatches);
   const allMatches = [
     ...synced.r32,
-    ...synced.r16,
-    ...synced.qf,
-    ...synced.sf,
-    synced.final
+    ...synced.r16
   ];
   
   return allMatches.filter(match => match.status === 'completed');
@@ -108,10 +100,7 @@ export function getUpcomingTournamentMatches(fifaMatches: FIFAMatch[]) {
   const synced = syncTournamentWithFIFA(fifaMatches);
   const allMatches = [
     ...synced.r32,
-    ...synced.r16,
-    ...synced.qf,
-    ...synced.sf,
-    synced.final
+    ...synced.r16
   ];
   
   return allMatches.filter(match => match.status === 'upcoming');
