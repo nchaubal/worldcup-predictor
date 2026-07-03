@@ -354,11 +354,13 @@ export default function BracketPage() {
   const bracketRef = useRef<HTMLDivElement>(null);
 
   const BRACKET_W = CW * 9 + GAP * 8;
+  const MIN_SCALE = 0.55; // Don't scale below this - use scrolling instead
 
   useEffect(() => {
     const recalc = () => {
       const avail = (outerRef.current?.clientWidth ?? window.innerWidth) - 48;
-      const s = Math.min(1, avail / BRACKET_W);
+      // On mobile, use a minimum scale and allow horizontal scrolling
+      const s = Math.max(MIN_SCALE, Math.min(1, avail / BRACKET_W));
       setScale(s);
       if (bracketRef.current) setBracketH(bracketRef.current.offsetHeight * s);
     };
@@ -577,17 +579,19 @@ export default function BracketPage() {
       <div className="mb-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-emerald-400" /> Confirmed</span>
         <span className="flex items-center gap-1"><Radio className="h-3 w-3 text-red-400 animate-pulse" /> Live</span>
-        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Click to predict</span>
-        <span className="flex items-center gap-1"><ZoomIn className="h-3 w-3 text-primary/60" /> Hover to magnify</span>
+        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Tap to predict</span>
+        <span className="hidden sm:flex items-center gap-1"><ZoomIn className="h-3 w-3 text-primary/60" /> Hover to magnify</span>
         <span className="flex items-center gap-1"><Brain className="h-3 w-3 text-primary/70" /> AI odds on pending</span>
+        <span className="flex sm:hidden items-center gap-1 text-primary">← Swipe to scroll →</span>
       </div>
 
       {/*
         Scale wrapper: the bracket renders at its natural pixel width,
-        then CSS transform shrinks it to fit. We set the outer height
-        to the post-scale height so the page flow collapses correctly.
+        then CSS transform shrinks it to fit. On mobile, we allow horizontal
+        scrolling to keep the bracket readable.
       */}
-      <div style={{ height: bracketH || undefined, width: BRACKET_W * scale || undefined }} className="overflow-visible">
+      <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div style={{ height: bracketH || undefined, width: BRACKET_W * scale, minWidth: BRACKET_W * MIN_SCALE }} className="overflow-visible">
         <div
           ref={bracketRef}
           style={{
@@ -692,6 +696,7 @@ export default function BracketPage() {
             <Col matches={rightR32} picks={picks} scores={scores} onScorePick={handleScorePick} showAI />
 
           </div>
+        </div>
         </div>
       </div>
     </div>

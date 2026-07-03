@@ -72,68 +72,84 @@ export function AuthButton() {
       </Button>
 
       {showAuth && (
-        <div className="absolute right-0 top-full mt-2 w-80 z-50">
-          <Card className="border-border shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                {isSignUp ? <UserPlus className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
-                {isSignUp ? "Create Account" : "Sign In"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-3">
-                {isSignUp && (
-                  <Input
-                    placeholder="Username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                  />
-                )}
-                <Input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                
-                {error && (
-                  <div className="text-sm text-red-500 bg-red-50 p-2 rounded">
-                    {error}
-                  </div>
-                )}
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
-                </Button>
-
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => setIsSignUp(!isSignUp)}
-                    className="text-sm text-primary hover:underline"
+        <>
+          {/* Backdrop for mobile */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+            onClick={() => setShowAuth(false)}
+          />
+          {/* Auth card - fixed on mobile, absolute on desktop */}
+          <div className="fixed inset-x-4 top-20 z-50 md:absolute md:inset-auto md:right-0 md:top-full md:mt-2 md:w-80">
+            <Card className="border-border shadow-lg">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    {isSignUp ? <UserPlus className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
+                    {isSignUp ? "Create Account" : "Sign In"}
+                  </CardTitle>
+                  <button 
+                    onClick={() => setShowAuth(false)}
+                    className="text-muted-foreground hover:text-foreground md:hidden"
                   >
-                    {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
+                    ✕
                   </button>
                 </div>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-3">
+                  {isSignUp && (
+                    <Input
+                      placeholder="Username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                    />
+                  )}
+                  <Input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  
+                  {error && (
+                    <div className="text-sm text-red-500 bg-red-50 p-2 rounded">
+                      {error}
+                    </div>
+                  )}
 
-                <div className="text-xs text-muted-foreground border-t pt-2">
-                  <p><strong>Demo Accounts:</strong></p>
-                  <p>alex@worldcup.com / password123</p>
-                  <p>sarah@worldcup.com / password123</p>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
+                  </Button>
+
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => setIsSignUp(!isSignUp)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
+                    </button>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground border-t pt-2">
+                    <p><strong>Demo Accounts:</strong></p>
+                    <p>alex@worldcup.com / password123</p>
+                    <p>sarah@worldcup.com / password123</p>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </>
       )}
     </div>
   );
