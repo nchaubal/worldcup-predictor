@@ -54,6 +54,12 @@ function getWinnerFromPenalties(fm: FootballDataMatch, homeTeamId: string, awayT
 }
 
 export function syncMatchWithFootballData(match: TournamentMatch, footballMatches: FootballDataMatch[]): TournamentMatch {
+  // If match is already completed in static data, trust our static data
+  // (handles cases where API data is incorrect, like penalty shootout scores)
+  if (match.status === 'completed' && match.winner) {
+    return match;
+  }
+
   // Find matching Football Data match by team names
   const homeTeam = TEAMS.find(t => t.id === match.homeTeamId);
   const awayTeam = TEAMS.find(t => t.id === match.awayTeamId);
