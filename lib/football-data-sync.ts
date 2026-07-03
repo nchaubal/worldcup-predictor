@@ -18,11 +18,12 @@ export interface TournamentMatch {
   pens?: string;
 }
 
-// football-data.org rolls penalty-shootout goals into fullTime. Subtract the
-// penalties to recover the real on-field (90'/extra-time) score.
-function getOnFieldScore(fullTime?: number | null, penalties?: number | null): number | null {
+// football-data.org provides fullTime as the score at end of extra time (not including
+// penalty shootout). The penalties field is the shootout score (e.g., 4-6), not goals
+// to subtract. So we just use fullTime directly.
+function getOnFieldScore(fullTime?: number | null): number | null {
   if (fullTime == null) return null;
-  return fullTime - (penalties ?? 0);
+  return fullTime;
 }
 
 export function syncMatchWithFootballData(match: TournamentMatch, footballMatches: FootballDataMatch[]): TournamentMatch {
@@ -50,10 +51,9 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
   // Check if teams are flipped in the API response
   const teamsFlipped = getTeamByName(footballMatch.homeTeam.name)?.id !== homeTeam.id;
 
-  // The API's fullTime includes penalty-shootout goals; subtract penalties to
-  // get the actual on-field (90'/ET) score.
-  const rawHome = getOnFieldScore(footballMatch.score.fullTime.home, footballMatch.score.penalties?.home);
-  const rawAway = getOnFieldScore(footballMatch.score.fullTime.away, footballMatch.score.penalties?.away);
+  // fullTime is the score at end of extra time (does not include penalty shootout goals)
+  const rawHome = getOnFieldScore(footballMatch.score.fullTime.home);
+  const rawAway = getOnFieldScore(footballMatch.score.fullTime.away);
   const homeScore = teamsFlipped ? rawAway : rawHome;
   const awayScore = teamsFlipped ? rawHome : rawAway;
 
@@ -143,9 +143,9 @@ export function convertFootballDataToTournamentMatch(footballMatch: FootballData
   const isCompleted = footballMatch.status === 'FINISHED';
   const isLive = footballMatch.status === 'LIVE' || footballMatch.status === 'IN_PLAY' || footballMatch.status === 'PAUSED';
 
-  // On-field score (penalty-shootout goals removed from fullTime)
-  const homeScore = getOnFieldScore(footballMatch.score.fullTime.home, footballMatch.score.penalties?.home);
-  const awayScore = getOnFieldScore(footballMatch.score.fullTime.away, footballMatch.score.penalties?.away);
+  // fullTime is the score at end of extra time (does not include penalty shootout goals)
+  const homeScore = getOnFieldScore(footballMatch.score.fullTime.home);
+  const awayScore = getOnFieldScore(footballMatch.score.fullTime.away);
 
   // Determine winner from the API winner field (accounts for penalty shootouts)
   let winner: string | undefined;
