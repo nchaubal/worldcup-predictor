@@ -107,8 +107,43 @@ export class SupabaseService {
       .eq('id', userId)
       .single();
     
-    if (error) throw error;
+    // PGRST116 = no rows found, which is fine for getProfile
+    if (error && error.code !== 'PGRST116') throw error;
     return data;
+  }
+
+  static async createProfile(userId: string, username: string, avatar: string = '⚽'): Promise<Profile> {
+    this.checkSupabase();
+    console.log('[createProfile] Creating profile', { userId, username, avatar });
+    
+    const { data, error } = await supabase!
+      .from('profiles')
+      .insert({ id: userId, username, avatar })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('[createProfile] Failed', { code: error.code, message: error.message, details: error.details });
+      throw error;
+    }
+    
+    console.log('[createProfile] Success', data);
+    return data;
+  }
+
+  static async getOrCreateProfile(userId: string, username: string, avatar: string = '⚽'): Promise<Profile> {
+    this.checkSupabase();
+    
+    // Try to get existing profile
+    const existing = await this.getProfile(userId);
+    if (existing) {
+      console.log('[getOrCreateProfile] Found existing profile', existing);
+      return existing;
+    }
+    
+    // Create new profile
+    console.log('[getOrCreateProfile] No profile found, creating new one');
+    return this.createProfile(userId, username, avatar);
   }
 
   static async updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile> {
@@ -328,6 +363,8 @@ export class SupabaseService {
 
   static async signUp(email: string, password: string, username: string) {
     this.checkSupabase();
+    console.log('[signUp] Starting signup', { email, username });
+    
     const { data, error } = await supabase!.auth.signUp({
       email,
       password,
@@ -338,7 +375,28 @@ export class SupabaseService {
       },
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error('[signUp] Auth signup failed', error);
+      throw error;
+    }
+    
+    // Create profile for the new user
+    if (data.user) {
+      console.log('[signUp] Auth user created, creating profile', { userId: data.user.id });
+      try {
+        await this.createProfile(data.user.id, username);
+        console.log('[signUp] Profile created successfully');
+      } catch (profileError: any) {
+        // If profile creation fails due to duplicate (user already exists), that's ok
+        if (profileError?.code === '23505') {
+          console.log('[signUp] Profile already exists, continuing');
+        } else {
+          console.error('[signUp] Profile creation failed', profileError);
+          throw profileError;
+        }
+      }
+    }
+    
     return data;
   }
 

@@ -99,7 +99,8 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
     const { data: { subscription } } = supabase ? supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         setIsAuthenticated(true);
-        await loadUserData(session.user.id);
+        const username = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'User';
+        await loadUserData(session.user.id, username);
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         setCurrentUser(null);
@@ -112,10 +113,13 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
     return () => subscription?.unsubscribe();
   }, []);
 
-  const loadUserData = async (userId: string) => {
+  const loadUserData = async (userId: string, username?: string) => {
     try {
-      // Load user profile
-      const profile = await SupabaseService.getProfile(userId);
+      // Load or create user profile
+      const profile = username 
+        ? await SupabaseService.getOrCreateProfile(userId, username)
+        : await SupabaseService.getProfile(userId);
+      
       if (profile) {
         setCurrentUser({
           userId: profile.id,
@@ -124,6 +128,8 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
           predictions: [],
           totalPoints: 0,
         });
+      } else {
+        console.warn('[loadUserData] No profile found and no username provided to create one');
       }
 
       // Load user's leagues
