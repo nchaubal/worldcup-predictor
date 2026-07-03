@@ -133,7 +133,7 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
         name: league.name,
         code: league.code,
         members: [], // Will be loaded separately
-        createdBy: league.created_by,
+        createdBy: league.creator_id,
       }));
       setLeagues(convertedLeagues);
 
@@ -283,7 +283,7 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
         name: newLeague.name,
         code: newLeague.code,
         members: [], // Will be loaded separately
-        createdBy: newLeague.created_by,
+        createdBy: newLeague.creator_id,
       };
       setLeagues(prev => [convertedLeague, ...prev]);
       return convertedLeague;
@@ -308,7 +308,7 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
           name: league.name,
           code: league.code,
           members: [], // Will be loaded separately
-          createdBy: league.created_by,
+          createdBy: league.creator_id,
         };
         setLeagues(prev => [...prev.filter(l => l.id !== league.id), convertedLeague]);
         return convertedLeague;

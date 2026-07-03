@@ -20,7 +20,7 @@ export interface League {
   id: string;
   name: string;
   code: string;
-  created_by: string;
+  creator_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -142,7 +142,7 @@ export class SupabaseService {
     
     const { data, error } = await supabase!
       .from('leagues')
-      .insert({ name, code, created_by: createdBy })
+      .insert({ name, code, creator_id: createdBy })
       .select()
       .single();
     
