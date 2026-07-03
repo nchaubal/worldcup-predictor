@@ -177,6 +177,40 @@ function Connector({ pairs, flip }: { pairs: number; flip?: boolean }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SFConnector — QF to SF connector (2 matches merge into 1)
+// ─────────────────────────────────────────────────────────────────────────────
+function SFConnector({ flip }: { flip?: boolean }) {
+  return (
+    <div className="flex flex-col justify-center self-stretch shrink-0" style={{ width: GAP }}>
+      <div className="flex-1 flex flex-col min-h-0">
+        {flip ? (
+          <>
+            <div className="flex-1 border-l-2 border-t-2 border-border/35 rounded-tl" />
+            <div className="flex-1 border-l-2 border-b-2 border-border/35 rounded-bl" />
+          </>
+        ) : (
+          <>
+            <div className="flex-1 border-r-2 border-t-2 border-border/35 rounded-tr" />
+            <div className="flex-1 border-r-2 border-b-2 border-border/35 rounded-br" />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FinalConnector — SF to Final connector (single line to center)
+// ─────────────────────────────────────────────────────────────────────────────
+function FinalConnector({ flip: _flip }: { flip?: boolean }) {
+  return (
+    <div className="flex flex-col justify-center self-stretch shrink-0" style={{ width: GAP }}>
+      <div className="h-0.5 bg-border/35" />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Column — a list of match cards, vertically spaced
 // ─────────────────────────────────────────────────────────────────────────────
 function Col({ matches, picks, onPick, showAI }: {
@@ -480,11 +514,22 @@ export default function BracketPage() {
 
             {/* Left QF */}
             <Col matches={leftQF} picks={picks} onPick={handlePick} showAI />
-            <Connector pairs={1} />
+            {/* QF→SF connector: 2 QF matches merge into 1 SF */}
+            <SFConnector flip={false} />
 
             {/* Left SF */}
-            <Col matches={[sf[0]]} picks={picks} onPick={handlePick} showAI />
-            <Connector pairs={1} />
+            <div className="flex flex-col justify-center shrink-0" style={{ width: CW }}>
+              <MatchCard
+                matchId="sf_1"
+                teamA={TEAMS.find(t => t.id === sf[0].teamAId) ?? null}
+                teamB={TEAMS.find(t => t.id === sf[0].teamBId) ?? null}
+                winnerId={sf[0].winnerId ?? picks["sf_1"] ?? null}
+                onPick={tid => handlePick("sf_1", tid)}
+                showAI
+              />
+            </div>
+            {/* SF→Final connector */}
+            <FinalConnector flip={false} />
 
             {/* Final + champion */}
             <div className="flex flex-col items-center justify-center shrink-0" style={{ width: CW }}>
@@ -507,9 +552,19 @@ export default function BracketPage() {
             </div>
 
             {/* Right connectors mirror left, converging back into the Final */}
-            <Connector pairs={1} flip />
-            <Col matches={[sf[1]]} picks={picks} onPick={handlePick} showAI />
-            <Connector pairs={1} flip />
+            <FinalConnector flip />
+            {/* Right SF */}
+            <div className="flex flex-col justify-center shrink-0" style={{ width: CW }}>
+              <MatchCard
+                matchId="sf_2"
+                teamA={TEAMS.find(t => t.id === sf[1].teamAId) ?? null}
+                teamB={TEAMS.find(t => t.id === sf[1].teamBId) ?? null}
+                winnerId={sf[1].winnerId ?? picks["sf_2"] ?? null}
+                onPick={tid => handlePick("sf_2", tid)}
+                showAI
+              />
+            </div>
+            <SFConnector flip />
 
             <Col matches={rightQF} picks={picks} onPick={handlePick} showAI />
             <Connector pairs={2} flip />
