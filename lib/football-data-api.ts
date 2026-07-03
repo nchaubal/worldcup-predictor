@@ -335,8 +335,27 @@ export class FootballDataApiService {
 
   // Get match score as string
   getMatchScore(match: FootballDataMatch): string {
-    const homeScore = match.score.fullTime.home ?? 0;
-    const awayScore = match.score.fullTime.away ?? 0;
+    let homeScore: number;
+    let awayScore: number;
+    
+    // For penalty shootout matches, use regularTime + extraTime (fullTime is unreliable)
+    if (match.score.duration === 'PENALTY_SHOOTOUT' || match.score.duration === 'PENALTY_SHOOTOUTS') {
+      const regHome = match.score.regularTime?.home ?? 0;
+      const regAway = match.score.regularTime?.away ?? 0;
+      const etHome = match.score.extraTime?.home ?? 0;
+      const etAway = match.score.extraTime?.away ?? 0;
+      homeScore = regHome + etHome;
+      awayScore = regAway + etAway;
+      
+      // Add penalty score if available
+      if (match.score.penalties?.home != null && match.score.penalties?.away != null) {
+        return `${homeScore}-${awayScore} (${match.score.penalties.home}-${match.score.penalties.away} pens)`;
+      }
+    } else {
+      homeScore = match.score.fullTime.home ?? 0;
+      awayScore = match.score.fullTime.away ?? 0;
+    }
+    
     return `${homeScore}-${awayScore}`;
   }
 
