@@ -25,7 +25,7 @@ export default function PredictPage() {
   }, [fetchWorldCupMatches]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center">
@@ -57,7 +57,7 @@ export default function PredictPage() {
         <TabsList className="flex flex-wrap h-auto gap-1 mb-6 bg-card border border-border/60 p-1 rounded-xl">
           {GROUPS.map((g) => (
             <TabsTrigger key={g} value={g}
-              className="rounded-lg text-xs font-semibold px-3 py-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              className="rounded-lg text-xs font-semibold px-3 py-1.5 transition-all duration-200 hover:scale-110 hover:bg-accent hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:scale-110 data-[state=active]:shadow-md data-[state=active]:shadow-primary/25">
               {g}
             </TabsTrigger>
           ))}
@@ -67,8 +67,8 @@ export default function PredictPage() {
           const standings = apiGroupStandings[g] || [];
           const hasBestThird = THIRD_PLACE_GROUPS.has(g);
           return (
-            <TabsContent key={g} value={g}>
-              <Card className="border-border/60 overflow-hidden">
+            <TabsContent key={g} value={g} className="animate-in fade-in slide-in-from-bottom-1 duration-300">
+              <Card className="border-border/60 overflow-hidden transition-shadow hover:shadow-lg">
                 <CardHeader className="py-3 px-5 border-b border-border/60 bg-muted/20">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base font-bold">Group {g}</CardTitle>
@@ -106,7 +106,7 @@ export default function PredictPage() {
                     return (
                       <div key={s.name}
                         className={cn(
-                          "grid grid-cols-[auto_1fr_repeat(6,_auto)] gap-x-3 px-5 py-3 items-center border-b border-border/20 last:border-0 transition-colors",
+                          "grid grid-cols-[auto_1fr_repeat(6,_auto)] gap-x-3 px-5 py-3 items-center border-b border-border/20 last:border-0 transition-all duration-150 hover:bg-accent/60 hover:px-6",
                           isWinner  && "bg-primary/8",
                           isRunner  && "bg-accent/50",
                           isBest3rd && "bg-accent/25",

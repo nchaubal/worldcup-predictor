@@ -160,15 +160,20 @@ export class SupabaseService {
   }
 
   // League operations
-  static async getLeagues(): Promise<League[]> {
+  static async getLeagues(userId: string): Promise<League[]> {
     this.checkSupabase();
+    // "Anyone can view leagues" RLS is intentionally permissive (so a league
+    // code can be looked up to join), but that means an unfiltered `leagues`
+    // select returns every league in the system, not just the user's own.
+    // Scope to leagues this user is actually a member of via league_members.
     const { data, error } = await supabase!
-      .from('leagues')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
+      .from('league_members')
+      .select('leagues(*)')
+      .eq('user_id', userId)
+      .order('joined_at', { ascending: false });
+
     if (error) throw error;
-    return data || [];
+    return ((data as any[]) || []).map((row) => row.leagues).filter(Boolean);
   }
 
   static async createLeague(name: string, createdBy: string): Promise<League> {
@@ -380,21 +385,15 @@ export class SupabaseService {
       throw error;
     }
     
-    // Create profile for the new user
+    // The on_auth_user_created DB trigger already creates a matching profiles
+    // row (via SECURITY DEFINER, bypassing RLS) as part of the signup
+    // transaction. getOrCreateProfile checks for that row first (a plain
+    // SELECT, permitted by RLS) instead of blindly re-inserting, since a
+    // direct INSERT here has no RLS policy allowing it and would always fail.
     if (data.user) {
-      console.log('[signUp] Auth user created, creating profile', { userId: data.user.id });
-      try {
-        await this.createProfile(data.user.id, username);
-        console.log('[signUp] Profile created successfully');
-      } catch (profileError: any) {
-        // If profile creation fails due to duplicate (user already exists), that's ok
-        if (profileError?.code === '23505') {
-          console.log('[signUp] Profile already exists, continuing');
-        } else {
-          console.error('[signUp] Profile creation failed', profileError);
-          throw profileError;
-        }
-      }
+      console.log('[signUp] Auth user created, ensuring profile exists', { userId: data.user.id });
+      await this.getOrCreateProfile(data.user.id, username);
+      console.log('[signUp] Profile ready');
     }
     
     return data;
