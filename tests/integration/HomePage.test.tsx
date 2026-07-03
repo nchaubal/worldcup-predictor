@@ -168,7 +168,8 @@ describe('HomePage Integration', () => {
     render(<HomePage />)
     
     expect(screen.getByText(/🇺🇸 USA · 🇨🇦 Canada · 🇲🇽 Mexico/)).toBeInTheDocument()
-    expect(screen.getByText(/Final: Jul 19, New Jersey/)).toBeInTheDocument()
+    expect(screen.getByText(/June 11 – July 19/)).toBeInTheDocument()
+    expect(screen.getByText(/Final: July 19 · New Jersey, USA/)).toBeInTheDocument()
   })
 
   it('has proper link structure', () => {

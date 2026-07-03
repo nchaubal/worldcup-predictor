@@ -10,10 +10,29 @@ interface FootballDataScoresProps {
   showOnlyLive?: boolean;
 }
 
-export const FootballDataScores: React.FC<FootballDataScoresProps> = ({ 
-  className, 
+function MatchRowSkeleton() {
+  return (
+    <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 animate-pulse">
+      <div className="flex items-center gap-3 flex-1">
+        <div className="flex-1 space-y-1.5 text-right">
+          <div className="h-3.5 w-24 rounded bg-muted ml-auto" />
+          <div className="h-2.5 w-10 rounded bg-muted ml-auto" />
+        </div>
+        <div className="h-4 w-8 rounded bg-muted shrink-0" />
+        <div className="flex-1 space-y-1.5">
+          <div className="h-3.5 w-24 rounded bg-muted" />
+          <div className="h-2.5 w-10 rounded bg-muted" />
+        </div>
+      </div>
+      <div className="h-5 w-12 rounded bg-muted ml-4 shrink-0" />
+    </div>
+  );
+}
+
+export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
+  className,
   limit = 10,
-  showOnlyLive = false 
+  showOnlyLive = false
 }) => {
   const { matches, loading, error, fetchLiveMatches, fetchTodayMatches } = useFootballData();
 
@@ -32,8 +51,10 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
           <CardTitle className="text-lg">World Cup 2026 Scores</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="space-y-3">
+            <MatchRowSkeleton />
+            <MatchRowSkeleton />
+            <MatchRowSkeleton />
           </div>
         </CardContent>
       </Card>
@@ -56,7 +77,7 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
     );
   }
 
-  const displayMatches = showOnlyLive 
+  const displayMatches = showOnlyLive
     ? matches.filter(m => m.isLive)
     : matches.slice(0, limit);
 
@@ -71,8 +92,8 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
             <p>
-              {showOnlyLive 
-                ? 'No live matches currently' 
+              {showOnlyLive
+                ? 'No live matches currently'
                 : 'No recent World Cup matches found'
               }
             </p>
@@ -92,7 +113,7 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
     }
     if (match.isFinished) {
       return (
-        <Badge variant="secondary" className="bg-green-100 text-green-800">
+        <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-400">
           FT
         </Badge>
       );
@@ -107,12 +128,12 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
   const getScoreDisplay = (match: FootballDataMatchWithDetails) => {
     if (match.isLive || match.isFinished) {
       return (
-        <span className={`font-bold ${match.isLive ? 'text-red-600' : 'text-gray-900'}`}>
+        <span className={`font-bold tabular-nums ${match.isLive ? 'text-red-400' : 'text-foreground'}`}>
           {match.formattedScore}
         </span>
       );
     }
-    return <span className="text-gray-500">vs</span>;
+    return <span className="text-muted-foreground">vs</span>;
   };
 
   return (
@@ -123,7 +144,7 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
           {!showOnlyLive && (
             <button
               onClick={() => fetchTodayMatches()}
-              className="text-sm text-muted-foreground hover:text-foreground"
+              className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >
               Refresh
             </button>
@@ -131,31 +152,33 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {displayMatches.map((match) => (
             <div
               key={match.id}
-              className={`flex items-center justify-between p-3 rounded-lg border ${
-                match.isLive ? 'border-red-200 bg-red-50' : 'border-gray-200'
+              className={`flex items-center justify-between p-3 rounded-lg border transition-colors duration-150 ${
+                match.isLive
+                  ? 'border-red-500/30 bg-red-500/5 hover:bg-red-500/10'
+                  : 'border-border/50 hover:bg-accent/40'
               }`}
             >
-              <div className="flex items-center space-x-3 flex-1">
+              <div className="flex items-center gap-3 flex-1">
                 <div className="text-right flex-1">
                   <p className="font-medium text-sm">{match.homeTeam.name}</p>
                   <p className="text-xs text-muted-foreground">{match.homeTeam.tla}</p>
                 </div>
-                
+
                 <div className="px-3">
                   {getScoreDisplay(match)}
                 </div>
-                
+
                 <div className="text-left flex-1">
                   <p className="font-medium text-sm">{match.awayTeam.name}</p>
                   <p className="text-xs text-muted-foreground">{match.awayTeam.tla}</p>
                 </div>
               </div>
-              
-              <div className="flex flex-col items-end space-y-1 ml-4">
+
+              <div className="flex flex-col items-end gap-1 ml-4">
                 {getStatusBadge(match)}
                 {match.stage && (
                   <span className="text-xs text-muted-foreground">
@@ -171,7 +194,7 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
             </div>
           ))}
         </div>
-        
+
         {!showOnlyLive && matches.length > limit && (
           <div className="mt-4 text-center">
             <button

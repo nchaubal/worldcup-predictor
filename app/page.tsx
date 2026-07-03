@@ -7,7 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LayoutGrid, GitBranch, Users, MapPin, CheckCircle2, Clock, Radio } from "lucide-react";
+import { LayoutGrid, GitBranch, Users, MapPin, CheckCircle2, Clock, Radio, Calendar, Trophy } from "lucide-react";
 import { TEAMS, GROUPS, GROUP_STANDINGS, R32_MATCHES, getTeamById, getTeamByName } from "@/lib/tournament-data";
 import { syncTournamentWithFootballData, getGroupStandingsFromAPI } from "@/lib/football-data-sync";
 import { FootballDataScores } from "@/components/FootballDataScores";
@@ -49,6 +49,32 @@ export default function HomePage() {
   const apiGroupStandings = getGroupStandingsFromAPI(footballMatches);
   const featuredGroups    = ["I", "J", "C", "L"]; // France, Argentina, Brazil, England groups
 
+  // Round of 32 grid always shows a 12-game window (4 rows x 3 cols) centered
+  // on the current match: 6 before it, the current match, and 5 after. Near
+  // either edge of the schedule, the window shifts inward so it still totals 12.
+  const r32List = syncedTournament.r32;
+  const currentR32Idx = (() => {
+    const liveIdx = r32List.findIndex(m => m.status === "live");
+    if (liveIdx !== -1) return liveIdx;
+    const upcomingIdx = r32List.findIndex(m => m.status === "upcoming");
+    if (upcomingIdx !== -1) return upcomingIdx;
+    return r32List.length - 1;
+  })();
+  const lastR32Idx = r32List.length - 1;
+  let windowStart = currentR32Idx - 6;
+  let windowEnd = currentR32Idx + 5;
+  if (windowEnd > lastR32Idx) {
+    windowStart -= windowEnd - lastR32Idx;
+    windowEnd = lastR32Idx;
+  }
+  if (windowStart < 0) {
+    windowEnd += -windowStart;
+    windowStart = 0;
+  }
+  windowStart = Math.max(0, windowStart);
+  windowEnd = Math.min(lastR32Idx, windowEnd);
+  const windowedR32 = r32List.slice(windowStart, windowEnd + 1);
+
   return (
     <div className="min-h-screen">
 
@@ -56,27 +82,27 @@ export default function HomePage() {
       <section className="relative overflow-hidden px-4 py-20 sm:px-6 lg:px-8"
         style={{ background: "linear-gradient(135deg, oklch(0.08 0.025 160) 0%, oklch(0.13 0.04 155) 50%, oklch(0.10 0.020 145) 100%)" }}>
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
-          <div className="absolute -bottom-16 -left-16 h-72 w-72 rounded-full bg-primary/8 blur-3xl" />
+          <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-primary/5 blur-3xl animate-float-slow" />
+          <div className="absolute -bottom-16 -left-16 h-72 w-72 rounded-full bg-primary/8 blur-3xl animate-float-slower" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[20rem] opacity-[0.03] select-none">⚽</div>
         </div>
 
         <div className="relative mx-auto max-w-5xl">
-          <div className="flex flex-col items-center text-center gap-6">
+          <div className="flex flex-col items-center text-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
             <Badge className="bg-primary/15 text-primary border-primary/30 text-xs px-4 py-1.5 font-semibold tracking-wide uppercase">
               🔴 Round of 32 Underway · Jun 28 – Jul 4
             </Badge>
 
-            <div className="flex items-center gap-5 sm:gap-8">
+            <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-8">
               <Image
                 src="/2026_FIFA_World_Cup_emblem.svg.webp"
                 alt="FIFA World Cup 2026"
                 width={960}
                 height={1482}
                 priority
-                className="h-28 w-auto sm:h-40 rounded-xl shrink-0"
+                className="h-24 w-auto sm:h-40 rounded-xl shrink-0"
               />
-              <h1 className="text-left text-4xl font-black tracking-tight sm:text-6xl leading-none">
+              <h1 className="text-center sm:text-left text-4xl font-black tracking-tight sm:text-6xl leading-none">
                 Boom FIFA World Cup<br />
                 <span className="text-primary">2026™</span>{" "}
                 <span className="text-foreground/60 font-light">Predictor</span>
@@ -88,17 +114,27 @@ export default function HomePage() {
             </p>
 
             <div className="flex flex-wrap gap-3 justify-center">
-              <Link href="/bracket" className={cn(buttonVariants({ size: "lg" }), "bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-8")}>
+              <Link href="/bracket" className={cn(buttonVariants({ size: "lg" }), "bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-8 transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-primary/25")}>
                 Build My Bracket
               </Link>
-              <Link href="/predict" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "border-border text-foreground hover:bg-accent px-8")}>
+              <Link href="/predict" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "border-border text-foreground hover:bg-accent px-8 transition-all duration-200 hover:scale-105")}>
                 Predict Matches
               </Link>
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              <span>🇺🇸 USA · 🇨🇦 Canada · 🇲🇽 Mexico · Final: Jul 19, New Jersey</span>
+            <div className="flex flex-col items-center gap-1.5 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                <span>🇺🇸 USA · 🇨🇦 Canada · 🇲🇽 Mexico</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span>June 11 – July 19</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4" />
+                <span>Final: July 19 · New Jersey, USA</span>
+              </div>
             </div>
           </div>
         </div>
@@ -109,7 +145,7 @@ export default function HomePage() {
         {/* ── Stats bar ──────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {STATS.map((s) => (
-            <Card key={s.label} className="text-center border-border/60">
+            <Card key={s.label} className="text-center border-border/60 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
               <CardContent className="py-5">
                 <div className="text-3xl mb-1">{s.icon}</div>
                 <div className="text-3xl font-black text-primary">{s.value}</div>
@@ -138,7 +174,7 @@ export default function HomePage() {
               <div className="grid sm:grid-cols-2 gap-3">
                 {footballMatches.filter(m => m.isLive).map((match) => {
                   return (
-                    <Card key={match.id} className="border-red-500/30 bg-red-500/5 ring-1 ring-red-500/20">
+                    <Card key={match.id} className="border-red-500/30 bg-red-500/5 ring-1 ring-red-500/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-red-500/10 hover:ring-red-500/40 sm:only:col-span-2">
                       <CardContent className="py-4 flex items-center gap-3">
                         <div className="flex-1 flex items-center gap-2">
                           <span className="text-lg font-bold text-muted-foreground">{match.homeTeam.tla}</span>
@@ -161,7 +197,7 @@ export default function HomePage() {
           )}
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {syncedTournament.r32.map((m) => {
+            {windowedR32.map((m) => {
               // Handle both static matches (with teamId) and API matches (with team names)
               let homeTeam, awayTeam;
               
@@ -182,7 +218,7 @@ export default function HomePage() {
               const awayWon = m.winner === (m.awayTeamId || awayTeam.id);
               
               return (
-                <Card key={m.id} className={`border-border/50 transition-all ${isCompleted ? "opacity-80" : "hover:border-primary/30"}`}>
+                <Card key={m.id} className={`border-border/50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${isCompleted ? "opacity-80 hover:opacity-100" : "hover:border-primary/30"}`}>
                   <CardContent className="py-3 px-4">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                       {statusIcon[m.status]}

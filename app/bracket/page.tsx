@@ -154,13 +154,22 @@ function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, stat
 // ─────────────────────────────────────────────────────────────────────────────
 // Connector — lines between rounds
 // ─────────────────────────────────────────────────────────────────────────────
-function Connector({ pairs }: { pairs: number }) {
+function Connector({ pairs, flip }: { pairs: number; flip?: boolean }) {
   return (
     <div className="flex flex-col justify-around self-stretch shrink-0" style={{ width: GAP }}>
       {Array.from({ length: pairs }).map((_, i) => (
         <div key={i} className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 border-r-2 border-t-2 border-border/35 rounded-tr" />
-          <div className="flex-1 border-r-2 border-b-2 border-border/35 rounded-br" />
+          {flip ? (
+            <>
+              <div className="flex-1 border-l-2 border-t-2 border-border/35 rounded-tl" />
+              <div className="flex-1 border-l-2 border-b-2 border-border/35 rounded-bl" />
+            </>
+          ) : (
+            <>
+              <div className="flex-1 border-r-2 border-t-2 border-border/35 rounded-tr" />
+              <div className="flex-1 border-r-2 border-b-2 border-border/35 rounded-br" />
+            </>
+          )}
         </div>
       ))}
     </div>
@@ -384,7 +393,7 @@ export default function BracketPage() {
   ];
 
   return (
-    <div className="px-4 py-4 sm:px-6 min-h-screen" ref={outerRef}>
+    <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 min-h-screen" ref={outerRef}>
 
       {/* Header */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -497,16 +506,16 @@ export default function BracketPage() {
               )}
             </div>
 
-            {/* Right connectors mirror left */}
-            <Connector pairs={1} />
+            {/* Right connectors mirror left, converging back into the Final */}
+            <Connector pairs={1} flip />
             <Col matches={[sf[1]]} picks={picks} onPick={handlePick} showAI />
-            <Connector pairs={1} />
+            <Connector pairs={1} flip />
 
             <Col matches={rightQF} picks={picks} onPick={handlePick} showAI />
-            <Connector pairs={2} />
+            <Connector pairs={2} flip />
 
             <Col matches={rightR16} picks={picks} onPick={handlePick} showAI />
-            <Connector pairs={4} />
+            <Connector pairs={4} flip />
 
             <Col matches={rightR32} picks={picks} onPick={handlePick} showAI />
 

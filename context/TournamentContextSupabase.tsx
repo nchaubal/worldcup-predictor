@@ -64,7 +64,7 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       }
 
       // Load user's leagues
-      const userLeagues = await SupabaseService.getLeagues();
+      const userLeagues = await SupabaseService.getLeagues(userId);
       const convertedLeagues: League[] = userLeagues.map(league => ({
         id: league.id,
         name: league.name,
@@ -412,6 +412,13 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
           totalPoints: getTotalPoints(),
         }];
       }
+
+      // Nothing else recalculates user_points when match_results change, so
+      // refresh every member's total before reading the leaderboard.
+      const members = await SupabaseService.getLeagueMembers(leagueId);
+      await Promise.all(
+        members.map((m) => SupabaseService.calculateUserPoints(m.id, leagueId))
+      );
 
       const userPoints = await SupabaseService.getUserPoints(leagueId);
       
