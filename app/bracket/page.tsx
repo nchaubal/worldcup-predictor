@@ -373,25 +373,26 @@ export default function BracketPage() {
     id, teamAId: r32W(a), teamBId: r32W(b), winnerId: picks[id] ?? null,
   }));
 
-  // QF pairings - standard bracket progression from R16:
-  // Each QF takes winners from adjacent R16 matches
-  //   qf_1: r16_1 vs r16_2 (Canada/Morocco winner vs France/Paraguay winner)
-  //   qf_2: r16_3 vs r16_4 (Brazil/Norway winner vs Mexico/England winner)
-  //   qf_3: r16_5 vs r16_6 (Spain/Portugal winner vs USA/Belgium winner)
-  //   qf_4: r16_7 vs r16_8 (Argentina/Australia winner vs Switzerland/Colombia winner)
+  // QF pairings based on official bracket:
+  // First half:
+  //   qf_1: r16_1 vs r16_2 (Canada/Morocco vs France/Paraguay)
+  //   qf_2: r16_6 vs r16_5 (USA/Belgium vs Portugal/Spain)
+  // Second half:
+  //   qf_3: r16_3 vs r16_4 (Brazil/Norway vs Mexico/England)
+  //   qf_4: r16_8 vs r16_7 (Switzerland/Colombia vs Argentina/Australia)
   const qf: MatchDef[] = [
     { id: "qf_1", teamAId: picks["r16_1"] ?? null, teamBId: picks["r16_2"] ?? null, winnerId: picks["qf_1"] ?? null },
-    { id: "qf_2", teamAId: picks["r16_3"] ?? null, teamBId: picks["r16_4"] ?? null, winnerId: picks["qf_2"] ?? null },
-    { id: "qf_3", teamAId: picks["r16_5"] ?? null, teamBId: picks["r16_6"] ?? null, winnerId: picks["qf_3"] ?? null },
-    { id: "qf_4", teamAId: picks["r16_7"] ?? null, teamBId: picks["r16_8"] ?? null, winnerId: picks["qf_4"] ?? null },
+    { id: "qf_2", teamAId: picks["r16_6"] ?? null, teamBId: picks["r16_5"] ?? null, winnerId: picks["qf_2"] ?? null },
+    { id: "qf_3", teamAId: picks["r16_3"] ?? null, teamBId: picks["r16_4"] ?? null, winnerId: picks["qf_3"] ?? null },
+    { id: "qf_4", teamAId: picks["r16_8"] ?? null, teamBId: picks["r16_7"] ?? null, winnerId: picks["qf_4"] ?? null },
   ];
 
-  // SF pairings restructured so Brazil/Argentina meet in SF1, France/Spain meet in SF2:
-  //   sf_1: qf_2 vs qf_4 (Brazil path vs Argentina path)
-  //   sf_2: qf_1 vs qf_3 (France path vs Spain path)
+  // SF pairings:
+  //   sf_1: qf_1 vs qf_2 (First half: France/Spain potential)
+  //   sf_2: qf_3 vs qf_4 (Second half: Brazil/Argentina potential)
   const sf: MatchDef[] = [
-    { id: "sf_1", teamAId: picks["qf_2"] ?? null, teamBId: picks["qf_4"] ?? null, winnerId: picks["sf_1"] ?? null },
-    { id: "sf_2", teamAId: picks["qf_1"] ?? null, teamBId: picks["qf_3"] ?? null, winnerId: picks["sf_2"] ?? null },
+    { id: "sf_1", teamAId: picks["qf_1"] ?? null, teamBId: picks["qf_2"] ?? null, winnerId: picks["sf_1"] ?? null },
+    { id: "sf_2", teamAId: picks["qf_3"] ?? null, teamBId: picks["qf_4"] ?? null, winnerId: picks["sf_2"] ?? null },
   ];
 
   // Final
@@ -409,28 +410,25 @@ export default function BracketPage() {
   // R32 display order: reordered so each consecutive pair feeds its R16 match,
   // keeping connectors visually correct.
   //
-  // Bracket structure (Brazil/Argentina in SF1, France/Spain in SF2):
-  // Left half (SF1 side - Brazil/Argentina):
-  //   r16_3 (r32_4 vs r32_6) → qf_2 (Brazil path)
-  //   r16_4 (r32_7 vs r32_8) → qf_2
-  //   r16_7 (r32_15 vs r32_14) → qf_4 (Argentina path)
-  //   r16_8 (r32_13 vs r32_16) → qf_4
+  // Left half (SF1 - France/Spain potential):
+  //   r16_1: r32_1 vs r32_3 (Canada vs Morocco) → qf_1
+  //   r16_2: r32_2 vs r32_5 (France vs Paraguay) → qf_1
+  //   r16_6: r32_10 vs r32_9 (USA vs Belgium) → qf_2
+  //   r16_5: r32_12 vs r32_11 (Portugal vs Spain) → qf_2
   //
-  // Right half (SF2 side - France/Spain):
-  //   r16_1 (r32_1 vs r32_3) → qf_1
-  //   r16_2 (r32_2 vs r32_5) → qf_1 (France path)
-  //   r16_5 (r32_12 vs r32_11) → qf_3 (Spain path)
-  //   r16_6 (r32_10 vs r32_9) → qf_3
-  const leftR32  = ["r32_4","r32_6","r32_7","r32_8","r32_15","r32_14","r32_13","r32_16"].map(r32ById);
-  const rightR32 = ["r32_1","r32_3","r32_2","r32_5","r32_12","r32_11","r32_10","r32_9"].map(r32ById);
+  // Right half (SF2 - Brazil/Argentina potential):
+  //   r16_3: r32_4 vs r32_6 (Brazil vs Norway) → qf_3
+  //   r16_4: r32_7 vs r32_8 (Mexico vs England) → qf_3
+  //   r16_8: r32_13 vs r32_16 (Switzerland vs Colombia) → qf_4
+  //   r16_7: r32_15 vs r32_14 (Argentina vs Australia) → qf_4
+  const leftR32  = ["r32_1","r32_3","r32_2","r32_5","r32_10","r32_9","r32_12","r32_11"].map(r32ById);
+  const rightR32 = ["r32_4","r32_6","r32_7","r32_8","r32_13","r32_16","r32_15","r32_14"].map(r32ById);
   
   // R16 matches reordered to match visual layout
-  // Left: r16_3, r16_4 (→qf_2), r16_7, r16_8 (→qf_4)
-  // Right: r16_1, r16_2 (→qf_1), r16_5, r16_6 (→qf_3)
-  const leftR16  = [r16[2], r16[3], r16[6], r16[7]]; // r16_3, r16_4, r16_7, r16_8
-  const rightR16 = [r16[0], r16[1], r16[4], r16[5]]; // r16_1, r16_2, r16_5, r16_6
-  const leftQF   = [qf[1], qf[3]];  // qf_2, qf_4 (Brazil/Argentina side)
-  const rightQF  = [qf[0], qf[2]];  // qf_1, qf_3 (France/Spain side)
+  const leftR16  = [r16[0], r16[1], r16[5], r16[4]]; // r16_1, r16_2, r16_6, r16_5
+  const rightR16 = [r16[2], r16[3], r16[7], r16[6]]; // r16_3, r16_4, r16_8, r16_7
+  const leftQF   = [qf[0], qf[1]];  // qf_1, qf_2 (France/Spain side)
+  const rightQF  = [qf[2], qf[3]];  // qf_3, qf_4 (Brazil/Argentina side)
 
   // Bracket columns left→right:
   // [R32-L] [R16-L] [QF-L] [SF-L] [FINAL] [SF-R] [QF-R] [R16-R] [R32-R]
