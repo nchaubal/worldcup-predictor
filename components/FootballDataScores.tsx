@@ -180,6 +180,8 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
             const matchDetails = getMatchDetails(match.homeTeam.name, match.awayTeam.name);
             const isExpanded = expandedMatch === match.id;
             const hasGoals = matchDetails && matchDetails.goals.length > 0;
+            const homeGoals = matchDetails?.goals.filter(g => g.team === 'home') || [];
+            const awayGoals = matchDetails?.goals.filter(g => g.team === 'away') || [];
 
             return (
               <div
@@ -197,16 +199,44 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
                   <div className="flex items-center gap-3 flex-1">
                     <div className="text-right flex-1">
                       <p className="font-medium text-sm">{match.homeTeam.name}</p>
-                      <p className="text-xs text-muted-foreground">{match.homeTeam.tla}</p>
+                      {/* Show goal scorers inline for home team */}
+                      {homeGoals.length > 0 && (
+                        <p className="text-[10px] text-muted-foreground truncate max-w-[120px] ml-auto">
+                          {homeGoals.map((g, i) => (
+                            <span key={i}>
+                              ⚽ {g.scorer} {g.minute}&apos;{g.penalty ? '(P)' : ''}{g.ownGoal ? '(OG)' : ''}
+                              {i < homeGoals.length - 1 && ', '}
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                      {homeGoals.length === 0 && <p className="text-xs text-muted-foreground">{match.homeTeam.tla}</p>}
                     </div>
 
-                    <div className="px-3">
+                    <div className="px-3 text-center">
                       {getScoreDisplay(match)}
+                      {/* Show elapsed time for live matches */}
+                      {match.isLive && (
+                        <p className="text-[10px] text-red-400 animate-pulse mt-0.5">
+                          {match.status === 'PAUSED' ? 'HT' : 'LIVE'}
+                        </p>
+                      )}
                     </div>
 
                     <div className="text-left flex-1">
                       <p className="font-medium text-sm">{match.awayTeam.name}</p>
-                      <p className="text-xs text-muted-foreground">{match.awayTeam.tla}</p>
+                      {/* Show goal scorers inline for away team */}
+                      {awayGoals.length > 0 && (
+                        <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                          {awayGoals.map((g, i) => (
+                            <span key={i}>
+                              ⚽ {g.scorer} {g.minute}&apos;{g.penalty ? '(P)' : ''}{g.ownGoal ? '(OG)' : ''}
+                              {i < awayGoals.length - 1 && ', '}
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                      {awayGoals.length === 0 && <p className="text-xs text-muted-foreground">{match.awayTeam.tla}</p>}
                     </div>
                   </div>
 

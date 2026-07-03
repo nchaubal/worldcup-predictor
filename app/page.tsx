@@ -7,11 +7,12 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LayoutGrid, GitBranch, Users, MapPin, CheckCircle2, Clock, Radio, Calendar, Trophy } from "lucide-react";
+import { LayoutGrid, GitBranch, Users, MapPin, CheckCircle2, Clock, Radio, Calendar, Trophy, ChevronDown, ChevronUp } from "lucide-react";
 import { TEAMS, GROUPS, GROUP_STANDINGS, R32_MATCHES, getTeamById, getTeamByName } from "@/lib/tournament-data";
 import { syncTournamentWithFootballData, getGroupStandingsFromAPI } from "@/lib/football-data-sync";
 import { FootballDataScores } from "@/components/FootballDataScores";
 import { useFootballData } from "@/hooks/useFootballData";
+import { useOpenFootball } from "@/hooks/useOpenFootball";
 
 const STATS = [
   { label: "Teams",   value: "48", icon: "🌍" },
@@ -34,7 +35,9 @@ const statusLabel = {
 
 export default function HomePage() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const { matches: footballMatches, fetchWorldCupMatches } = useFootballData();
+  const { getMatchDetails } = useOpenFootball();
 
   // Fetch ALL World Cup matches on mount (and refresh every 60s) so standings,
   // completed results, and live matches stay current.
@@ -214,21 +217,38 @@ export default function HomePage() {
               }
               
               const isCompleted = m.status === "completed";
+              const isLive = m.status === "live";
               const homeWon = m.winner === (m.homeTeamId || homeTeam.id);
               const awayWon = m.winner === (m.awayTeamId || awayTeam.id);
               
+              // Get match details from OpenFootball
+              const matchDetails = getMatchDetails(homeTeam.name, awayTeam.name);
+              const hasGoals = matchDetails && matchDetails.goals.length > 0;
+              const isExpanded = expandedMatch === m.id;
+              const homeGoals = matchDetails?.goals.filter(g => g.team === 'home') || [];
+              const awayGoals = matchDetails?.goals.filter(g => g.team === 'away') || [];
+              
               return (
-                <Card key={m.id} className={`border-border/50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${isCompleted ? "opacity-80 hover:opacity-100" : "hover:border-primary/30"}`}>
+                <Card 
+                  key={m.id} 
+                  className={`border-border/50 transition-all duration-200 ${isCompleted ? "opacity-80 hover:opacity-100" : "hover:border-primary/30"} ${hasGoals ? "cursor-pointer" : ""}`}
+                  onClick={() => hasGoals && setExpandedMatch(isExpanded ? null : m.id)}
+                >
                   <CardContent className="py-3 px-4">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                      {statusIcon[m.status]}
-                      <span className={`font-semibold ${m.status === "live" ? "text-red-400" : m.status === "completed" ? "text-emerald-400" : ""}`}>
-                        {statusLabel[m.status]}
-                      </span>
-                      <span>·</span>
-                      <span>{m.date}</span>
-                      <span>·</span>
-                      <MapPin className="h-3 w-3" /><span>{m.venue}</span>
+                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground mb-2">
+                      <div className="flex items-center gap-2">
+                        {statusIcon[m.status]}
+                        <span className={`font-semibold ${m.status === "live" ? "text-red-400" : m.status === "completed" ? "text-emerald-400" : ""}`}>
+                          {statusLabel[m.status]}
+                        </span>
+                        <span>·</span>
+                        <span>{m.date}</span>
+                        <span>·</span>
+                        <MapPin className="h-3 w-3" /><span>{m.venue}</span>
+                      </div>
+                      {hasGoals && (
+                        isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <div className={`flex-1 flex items-center gap-2 ${isCompleted && !homeWon ? "opacity-40" : ""}`}>
@@ -236,7 +256,7 @@ export default function HomePage() {
                         <span className={`text-sm font-semibold ${homeWon ? "text-primary" : ""}`}>{homeTeam.name}</span>
                       </div>
                       <div className="shrink-0 text-center min-w-[3rem]">
-                        {isCompleted ? (
+                        {isCompleted || isLive ? (
                           <div className="font-black text-base">
                             <span className={homeWon ? "text-primary" : ""}>{m.homeScore}</span>
                             <span className="text-muted-foreground mx-1">–</span>
@@ -246,12 +266,59 @@ export default function HomePage() {
                           <span className="text-muted-foreground text-sm font-bold">vs</span>
                         )}
                         {m.pens && <div className="text-[10px] text-muted-foreground">pens {m.pens}</div>}
+                        {isLive && <div className="text-[10px] text-red-400 animate-pulse">LIVE</div>}
                       </div>
                       <div className={`flex-1 flex items-center justify-end gap-2 ${isCompleted && !awayWon ? "opacity-40" : ""}`}>
                         <span className={`text-sm font-semibold ${awayWon ? "text-primary" : ""}`}>{awayTeam.name}</span>
                         <span className="text-xl">{awayTeam.flag}</span>
                       </div>
                     </div>
+                    
+                    {/* Expanded goal scorers section */}
+                    {isExpanded && matchDetails && (
+                      <div className="mt-3 pt-3 border-t border-border/30">
+                        <div className="grid grid-cols-2 gap-4 text-[10px]">
+                          <div className="text-left space-y-0.5">
+                            {homeGoals.length > 0 ? homeGoals.map((goal, i) => (
+                              <div key={i} className="text-muted-foreground">
+                                ⚽ {goal.scorer} {goal.minute}&apos;
+                                {goal.penalty && ' (P)'}
+                                {goal.ownGoal && ' (OG)'}
+                              </div>
+                            )) : <span className="text-muted-foreground/50 italic">No goals</span>}
+                          </div>
+                          <div className="text-right space-y-0.5">
+                            {awayGoals.length > 0 ? awayGoals.map((goal, i) => (
+                              <div key={i} className="text-muted-foreground">
+                                ⚽ {goal.scorer} {goal.minute}&apos;
+                                {goal.penalty && ' (P)'}
+                                {goal.ownGoal && ' (OG)'}
+                              </div>
+                            )) : <span className="text-muted-foreground/50 italic">No goals</span>}
+                          </div>
+                        </div>
+                        {matchDetails.cards.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-border/20">
+                            <div className="grid grid-cols-2 gap-4 text-[10px] text-muted-foreground">
+                              <div className="text-left">
+                                {matchDetails.cards.filter(c => c.team === 'home').map((card, i) => (
+                                  <div key={i}>
+                                    {card.type === 'red' ? '🟥' : card.type === 'yellowred' ? '🟨🟥' : '🟨'} {card.player} {card.minute}&apos;
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="text-right">
+                                {matchDetails.cards.filter(c => c.team === 'away').map((card, i) => (
+                                  <div key={i}>
+                                    {card.type === 'red' ? '🟥' : card.type === 'yellowred' ? '🟨🟥' : '🟨'} {card.player} {card.minute}&apos;
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
