@@ -100,51 +100,60 @@ export default function LeaguesPage() {
         </div>
       )}
 
-      <div className="grid sm:grid-cols-2 gap-6 mb-8">
-        <Card className="border-border/60">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Plus className="h-4 w-4 text-primary" /> Create a League
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Input
-              placeholder="League name..."
-              value={newLeagueName}
-              onChange={(e) => setNewLeagueName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            />
-            <Button onClick={handleCreate} disabled={!newLeagueName.trim()} className="w-full">
-              Create League
-            </Button>
+      {!isAuthenticated ? (
+        <Card className="mb-8 border-amber-500/30 bg-amber-500/5">
+          <CardContent className="py-6 text-center">
+            <p className="text-amber-400 font-medium mb-2">Sign in to create or join leagues</p>
+            <p className="text-sm text-muted-foreground">Use the Sign In button in the top navigation bar</p>
           </CardContent>
         </Card>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-6 mb-8">
+          <Card className="border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Plus className="h-4 w-4 text-primary" /> Create a League
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                placeholder="League name..."
+                value={newLeagueName}
+                onChange={(e) => setNewLeagueName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+              />
+              <Button onClick={handleCreate} disabled={!newLeagueName.trim()} className="w-full">
+                Create League
+              </Button>
+            </CardContent>
+          </Card>
 
-        <Card className="border-border/60">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <LogIn className="h-4 w-4 text-primary" /> Join a League
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Input
-              placeholder="Enter league code..."
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-              className="uppercase tracking-widest"
-            />
-            <Button
-              onClick={handleJoin}
-              disabled={!joinCode.trim()}
-              variant="outline"
-              className="w-full"
-            >
-              Join League
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <LogIn className="h-4 w-4 text-primary" /> Join a League
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                placeholder="Enter league code..."
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+                className="uppercase tracking-widest"
+              />
+              <Button
+                onClick={handleJoin}
+                disabled={!joinCode.trim()}
+                variant="outline"
+                className="w-full"
+              >
+                Join League
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {leagues.length > 0 && (
         <div className="mb-6">
