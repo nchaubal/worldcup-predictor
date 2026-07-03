@@ -246,13 +246,26 @@ export class SupabaseService {
 
   static async getLeagueMembers(leagueId: string): Promise<Profile[]> {
     this.checkSupabase();
-    const { data, error } = await supabase!
+    // Avoid PostgREST's automatic FK-based embedding here: the live
+    // league_members.user_id -> profiles relationship isn't detected in the
+    // schema cache (even though league_members.league_id -> leagues is), so
+    // fetch member ids and profiles as two plain queries instead.
+    const { data: members, error: membersError } = await supabase!
       .from('league_members')
-      .select('profiles!inner(*)')
+      .select('user_id')
       .eq('league_id', leagueId);
-    
-    if (error) throw error;
-    return (data as any[])?.map(member => member.profiles) || [];
+
+    if (membersError) throw membersError;
+    const userIds = (members || []).map((m: any) => m.user_id);
+    if (userIds.length === 0) return [];
+
+    const { data: profiles, error: profilesError } = await supabase!
+      .from('profiles')
+      .select('*')
+      .in('id', userIds);
+
+    if (profilesError) throw profilesError;
+    return profiles || [];
   }
 
   // Prediction operations
