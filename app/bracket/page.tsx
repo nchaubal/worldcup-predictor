@@ -555,10 +555,10 @@ export default function BracketPage() {
   ];
 
   return (
-    <div className="mx-auto px-4 py-4 sm:px-6 lg:px-8 min-h-screen" ref={outerRef}>
+    <div className="px-4 py-4 sm:px-6 lg:px-8 min-h-screen" ref={outerRef}>
 
       {/* Header */}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto max-w-7xl mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center shrink-0">
             <GitBranch className="h-4 w-4 text-primary" />
@@ -600,7 +600,7 @@ export default function BracketPage() {
       </div>
 
       {/* Legend */}
-      <div className="mb-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+      <div className="mx-auto max-w-7xl mb-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-emerald-400" /> Confirmed</span>
         <span className="flex items-center gap-1"><Radio className="h-3 w-3 text-red-400 animate-pulse" /> Live</span>
         <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Tap to predict</span>
@@ -614,7 +614,7 @@ export default function BracketPage() {
         then CSS transform shrinks it to fit. On mobile, we allow horizontal
         scrolling to keep the bracket readable.
       */}
-      <div className="overflow-x-auto sm:overflow-visible pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="overflow-x-auto sm:overflow-visible pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 flex justify-center">
         <div style={{ height: bracketH || undefined, width: BRACKET_W * scale, minWidth: BRACKET_W * MIN_SCALE }} className="overflow-visible">
         <div
           ref={bracketRef}
