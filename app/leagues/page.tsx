@@ -1,22 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
-import { UserPredictions } from "@/lib/tournament-data";
-import { Users, Plus, LogIn, Trophy, Medal, Copy, CheckCheck } from "lucide-react";
+import { UserPredictions, GROUP_MATCHES, TEAMS } from "@/lib/tournament-data";
+import { SupabaseService, GroupPrediction } from "@/lib/supabase";
+import { Users, Plus, LogIn, Trophy, Medal, Copy, CheckCheck, Target, ChevronRight, X } from "lucide-react";
 
 export default function LeaguesPage() {
-  const { leagues, currentUser, createLeague, joinLeague, getLeaderboard, isLoading, isAuthenticated } = useTournamentSupabase();
+  const { leagues, currentUser, createLeague, joinLeague, getLeaderboard, isLoading, isAuthenticated, setPredictionPrediction, predictionPredictions } = useTournamentSupabase();
   const [newLeagueName, setNewLeagueName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [activeLeague, setActiveLeague] = useState("global");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<"leaderboard" | "predict">("leaderboard");
+  const [selectedMember, setSelectedMember] = useState<UserPredictions | null>(null);
+  const [memberPredictions, setMemberPredictions] = useState<GroupPrediction[]>([]);
+  const [predictionInputs, setPredictionInputs] = useState<{ [matchId: string]: { home: number; away: number } }>({});
 
   const handleCreate = async () => {
     if (!newLeagueName.trim()) return;
@@ -64,6 +69,38 @@ export default function LeaguesPage() {
     };
     loadLeaderboard();
   }, [activeLeague, getLeaderboard]);
+
+  const loadMemberPredictions = useCallback(async (member: UserPredictions) => {
+    setSelectedMember(member);
+    try {
+      const predictions = await SupabaseService.getUserGroupPredictions(member.userId);
+      setMemberPredictions(predictions);
+      
+      // Pre-fill with existing prediction predictions
+      const existingPredictions: { [matchId: string]: { home: number; away: number } } = {};
+      predictionPredictions
+        .filter(pp => pp.predicted_user_id === member.userId)
+        .forEach(pp => {
+          existingPredictions[pp.match_id] = { home: pp.predicted_home_score, away: pp.predicted_away_score };
+        });
+      setPredictionInputs(existingPredictions);
+    } catch (error) {
+      console.error('Error loading member predictions:', error);
+    }
+  }, [predictionPredictions]);
+
+  const handleSavePredictionPrediction = async (matchId: string) => {
+    if (!selectedMember || !predictionInputs[matchId]) return;
+    const { home, away } = predictionInputs[matchId];
+    try {
+      await setPredictionPrediction(selectedMember.userId, matchId, home, away);
+      setMessage({ type: "success", text: `Prediction saved! You'll earn 3 pts if ${selectedMember.userName} predicts ${home}-${away}` });
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to save prediction" });
+    }
+  };
+
+  const getTeamById = (id: string) => TEAMS.find(t => t.id === id);
 
   const medalColors = [
     "text-yellow-500",
@@ -230,7 +267,7 @@ export default function LeaguesPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-yellow-500" />
-                {currentLeague.name} — Leaderboard
+                {currentLeague.name}
               </CardTitle>
               {currentLeague.code !== "GLOBAL" && (
                 <button
@@ -245,39 +282,187 @@ export default function LeaguesPage() {
                 </button>
               )}
             </div>
+            {/* Tabs */}
+            <div className="flex gap-1 mt-3 border-b border-border">
+              <button
+                onClick={() => { setActiveTab("leaderboard"); setSelectedMember(null); }}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "leaderboard" 
+                    ? "border-primary text-primary" 
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Trophy className="h-4 w-4 inline mr-1.5" />
+                Leaderboard
+              </button>
+              <button
+                onClick={() => setActiveTab("predict")}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === "predict" 
+                    ? "border-primary text-primary" 
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Target className="h-4 w-4 inline mr-1.5" />
+                Predict Members
+              </button>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {leaderboard.map((user, idx) => {
-                const isMe = currentUser?.userId === user.userId;
-                return (
-                  <div
-                    key={user.userId}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-3 ${
-                      isMe ? "bg-primary/8 ring-1 ring-primary/25" : "hover:bg-accent/40"
-                    }`}
-                  >
-                    <div className={`w-8 text-center font-bold text-lg ${medalColors[idx] ?? "text-muted-foreground"}`}>
-                      {idx < 3 ? <Medal className="h-5 w-5 mx-auto" /> : idx + 1}
-                    </div>
-                    <div className="text-2xl">{user.avatar}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium flex items-center gap-2">
-                        {user.userName}
-                        {isMe && <Badge variant="secondary" className="text-xs">You</Badge>}
+            {activeTab === "leaderboard" ? (
+              <div className="space-y-2">
+                {leaderboard.map((user, idx) => {
+                  const isMe = currentUser?.userId === user.userId;
+                  return (
+                    <div
+                      key={user.userId}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-3 ${
+                        isMe ? "bg-primary/8 ring-1 ring-primary/25" : "hover:bg-accent/40"
+                      }`}
+                    >
+                      <div className={`w-8 text-center font-bold text-lg ${medalColors[idx] ?? "text-muted-foreground"}`}>
+                        {idx < 3 ? <Medal className="h-5 w-5 mx-auto" /> : idx + 1}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {user.predictions?.length ?? 0} predictions made
+                      <div className="text-2xl">{user.avatar}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium flex items-center gap-2">
+                          {user.userName}
+                          {isMe && <Badge variant="secondary" className="text-xs">You</Badge>}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {user.predictions?.length ?? 0} predictions made
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xl font-bold">{user.totalPoints}</div>
+                        <div className="text-xs text-muted-foreground">pts</div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold">{user.totalPoints}</div>
-                      <div className="text-xs text-muted-foreground">pts</div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {!selectedMember ? (
+                  <>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Select a league member to predict what scores they will predict. Earn <Badge className="bg-purple-500/15 text-purple-400 border-purple-500/30">+3 points</Badge> for each correct guess!
+                    </p>
+                    <div className="space-y-2">
+                      {leaderboard.filter(u => u.userId !== currentUser?.userId).map((user) => (
+                        <button
+                          key={user.userId}
+                          onClick={() => loadMemberPredictions(user)}
+                          className="w-full flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-accent/40 transition-colors text-left"
+                        >
+                          <div className="text-2xl">{user.avatar}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium">{user.userName}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {user.predictions?.length ?? 0} predictions made
+                            </div>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        </button>
+                      ))}
+                      {leaderboard.filter(u => u.userId !== currentUser?.userId).length === 0 && (
+                        <div className="text-center text-sm text-muted-foreground py-8">
+                          No other members in this league yet. Invite friends to compete!
+                        </div>
+                      )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 mb-4">
+                      <button
+                        onClick={() => setSelectedMember(null)}
+                        className="p-1.5 rounded-lg hover:bg-accent transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      <div className="text-2xl">{selectedMember.avatar}</div>
+                      <div>
+                        <div className="font-medium">{selectedMember.userName}&apos;s Predictions</div>
+                        <div className="text-xs text-muted-foreground">Guess what they will predict</div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {GROUP_MATCHES.slice(0, 12).map((match) => {
+                        const homeTeam = match.homeTeam;
+                        const awayTeam = match.awayTeam;
+                        const memberPred = memberPredictions.find(p => p.match_id === match.id);
+                        const myPrediction = predictionInputs[match.id];
+                        const existingPredPred = predictionPredictions.find(
+                          pp => pp.predicted_user_id === selectedMember.userId && pp.match_id === match.id
+                        );
+                        
+                        return (
+                          <div key={match.id} className="rounded-lg border border-border/50 p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2 text-sm">
+                                <span>{homeTeam?.flag}</span>
+                                <span className="font-medium">{homeTeam?.name}</span>
+                                <span className="text-muted-foreground">vs</span>
+                                <span className="font-medium">{awayTeam?.name}</span>
+                                <span>{awayTeam?.flag}</span>
+                              </div>
+                              {memberPred && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Their pick: {memberPred.home_score}-{memberPred.away_score}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">Your guess:</span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="20"
+                                value={myPrediction?.home ?? ""}
+                                onChange={(e) => setPredictionInputs(prev => ({
+                                  ...prev,
+                                  [match.id]: { ...prev[match.id], home: parseInt(e.target.value) || 0 }
+                                }))}
+                                className="w-12 h-7 text-center text-sm font-bold rounded border border-border bg-background"
+                                placeholder="0"
+                              />
+                              <span className="text-muted-foreground">-</span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="20"
+                                value={myPrediction?.away ?? ""}
+                                onChange={(e) => setPredictionInputs(prev => ({
+                                  ...prev,
+                                  [match.id]: { ...prev[match.id], away: parseInt(e.target.value) || 0 }
+                                }))}
+                                className="w-12 h-7 text-center text-sm font-bold rounded border border-border bg-background"
+                                placeholder="0"
+                              />
+                              <Button
+                                size="sm"
+                                variant={existingPredPred ? "secondary" : "default"}
+                                onClick={() => handleSavePredictionPrediction(match.id)}
+                                disabled={!myPrediction?.home && myPrediction?.home !== 0}
+                                className="ml-auto text-xs h-7"
+                              >
+                                {existingPredPred ? "Update" : "Save"}
+                              </Button>
+                            </div>
+                            {existingPredPred && (
+                              <div className="mt-2 text-xs text-purple-400">
+                                ✓ You predicted: {existingPredPred.predicted_home_score}-{existingPredPred.predicted_away_score}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

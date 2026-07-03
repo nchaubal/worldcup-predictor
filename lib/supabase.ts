@@ -282,6 +282,28 @@ export class SupabaseService {
     return data || [];
   }
 
+  static async getUserGroupPredictions(userId: string): Promise<GroupPrediction[]> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('group_predictions')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async getUserKnockoutPredictions(userId: string): Promise<KnockoutPrediction[]> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('knockout_predictions')
+      .select('*')
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    return data || [];
+  }
+
   static async upsertGroupPrediction(
     userId: string, 
     matchId: string, 
