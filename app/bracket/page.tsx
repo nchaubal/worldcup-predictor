@@ -7,7 +7,7 @@ import { TEAMS, Team, R32_MATCHES } from "@/lib/tournament-data";
 import { syncTournamentWithFootballData } from "@/lib/football-data-sync";
 import { predictMatch } from "@/lib/ai-predictor";
 import { useFootballData } from "@/hooks/useFootballData";
-import { GitBranch, Brain, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo, Edit3 } from "lucide-react";
+import { GitBranch, Brain, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo, Edit3, X } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -153,42 +153,58 @@ function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, stat
       </div>
       {/* Score prediction popover */}
       {scoreOpen && teamA && teamB && (
-        <div className="absolute left-full top-0 ml-2 z-50 w-44 rounded-xl border border-emerald-500/25 bg-card p-3 shadow-2xl text-xs space-y-2">
-          <div className="font-bold text-emerald-500 flex items-center gap-1"><Edit3 className="h-3 w-3" /> Predict Score</div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{teamA.flag}</span>
-              <span className="flex-1 truncate text-xs">{teamA.name}</span>
-              <input
-                type="number"
-                min="0"
-                max="20"
-                value={tempScoreA}
-                onChange={(e) => setTempScoreA(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
-                className="w-10 h-6 text-center text-sm font-bold rounded border border-border bg-background"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{teamB.flag}</span>
-              <span className="flex-1 truncate text-xs">{teamB.name}</span>
-              <input
-                type="number"
-                min="0"
-                max="20"
-                value={tempScoreB}
-                onChange={(e) => setTempScoreB(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
-                className="w-10 h-6 text-center text-sm font-bold rounded border border-border bg-background"
-              />
-            </div>
-          </div>
-          <button
-            onClick={handleScoreSubmit}
-            className="w-full py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition-colors"
+        <>
+          {/* Backdrop to close on click outside */}
+          <div className="fixed inset-0 z-40" onClick={() => setScoreOpen(false)} />
+          <div 
+            className="absolute left-full top-0 ml-2 z-50 w-44 rounded-xl border border-emerald-500/25 bg-card p-3 shadow-2xl text-xs space-y-2"
+            onKeyDown={(e) => e.key === 'Escape' && setScoreOpen(false)}
           >
-            Save Prediction
-          </button>
-          <p className="text-muted-foreground text-[10px] text-center">+5 pts for exact score!</p>
-        </div>
+            <div className="flex items-center justify-between">
+              <div className="font-bold text-emerald-500 flex items-center gap-1"><Edit3 className="h-3 w-3" /> Predict Score</div>
+              <button 
+                onClick={() => setScoreOpen(false)} 
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{teamA.flag}</span>
+                <span className="flex-1 truncate text-xs">{teamA.name}</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={tempScoreA}
+                  onChange={(e) => setTempScoreA(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
+                  className="w-10 h-6 text-center text-sm font-bold rounded border border-border bg-background"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{teamB.flag}</span>
+                <span className="flex-1 truncate text-xs">{teamB.name}</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={tempScoreB}
+                  onChange={(e) => setTempScoreB(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
+                  className="w-10 h-6 text-center text-sm font-bold rounded border border-border bg-background"
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleScoreSubmit}
+              className="w-full py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition-colors"
+            >
+              Save Prediction
+            </button>
+            <p className="text-muted-foreground text-[10px] text-center">+5 pts for exact score!</p>
+          </div>
+        </>
       )}
       {/* AI popover */}
       {aiOpen && pred && (
