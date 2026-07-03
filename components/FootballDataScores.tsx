@@ -1,8 +1,11 @@
-// Football Data.org Scores Component
-import React from 'react';
+// Football Data.org Scores Component with OpenFootball enrichment
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useFootballData, FootballDataMatchWithDetails } from '@/hooks/useFootballData';
+import { useOpenFootball } from '@/hooks/useOpenFootball';
+import { MatchDetails } from '@/lib/openfootball-api';
 
 interface FootballDataScoresProps {
   className?: string;
@@ -29,12 +32,32 @@ function MatchRowSkeleton() {
   );
 }
 
+// Goal scorers display component
+function GoalScorersDisplay({ details, isHome }: { details: MatchDetails; isHome: boolean }) {
+  const goals = details.goals.filter(g => g.team === (isHome ? 'home' : 'away'));
+  if (goals.length === 0) return null;
+
+  return (
+    <div className={`text-[10px] text-muted-foreground ${isHome ? 'text-right' : 'text-left'}`}>
+      {goals.map((goal, i) => (
+        <div key={i} className="truncate">
+          ⚽ {goal.scorer} {goal.minute}&apos;
+          {goal.penalty && ' (P)'}
+          {goal.ownGoal && ' (OG)'}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
   className,
   limit = 10,
   showOnlyLive = false
 }) => {
   const { matches, loading, error, fetchLiveMatches, fetchTodayMatches } = useFootballData();
+  const { getMatchDetails } = useOpenFootball();
+  const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
 
   React.useEffect(() => {
     const load = () => (showOnlyLive ? fetchLiveMatches() : fetchTodayMatches());
@@ -153,46 +176,92 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {displayMatches.map((match) => (
-            <div
-              key={match.id}
-              className={`flex items-center justify-between p-3 rounded-lg border transition-colors duration-150 ${
-                match.isLive
-                  ? 'border-red-500/30 bg-red-500/5 hover:bg-red-500/10'
-                  : 'border-border/50 hover:bg-accent/40'
-              }`}
-            >
-              <div className="flex items-center gap-3 flex-1">
-                <div className="text-right flex-1">
-                  <p className="font-medium text-sm">{match.homeTeam.name}</p>
-                  <p className="text-xs text-muted-foreground">{match.homeTeam.tla}</p>
+          {displayMatches.map((match) => {
+            const matchDetails = getMatchDetails(match.homeTeam.name, match.awayTeam.name);
+            const isExpanded = expandedMatch === match.id;
+            const hasGoals = matchDetails && matchDetails.goals.length > 0;
+
+            return (
+              <div
+                key={match.id}
+                className={`rounded-lg border transition-colors duration-150 ${
+                  match.isLive
+                    ? 'border-red-500/30 bg-red-500/5'
+                    : 'border-border/50'
+                }`}
+              >
+                <div 
+                  className={`flex items-center justify-between p-3 ${hasGoals ? 'cursor-pointer hover:bg-accent/40' : ''}`}
+                  onClick={() => hasGoals && setExpandedMatch(isExpanded ? null : match.id)}
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="text-right flex-1">
+                      <p className="font-medium text-sm">{match.homeTeam.name}</p>
+                      <p className="text-xs text-muted-foreground">{match.homeTeam.tla}</p>
+                    </div>
+
+                    <div className="px-3">
+                      {getScoreDisplay(match)}
+                    </div>
+
+                    <div className="text-left flex-1">
+                      <p className="font-medium text-sm">{match.awayTeam.name}</p>
+                      <p className="text-xs text-muted-foreground">{match.awayTeam.tla}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1 ml-4">
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(match)}
+                      {hasGoals && (
+                        isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    {match.stage && (
+                      <span className="text-xs text-muted-foreground">
+                        {match.stage}
+                      </span>
+                    )}
+                    {match.group && (
+                      <span className="text-xs text-muted-foreground">
+                        {match.group}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="px-3">
-                  {getScoreDisplay(match)}
-                </div>
-
-                <div className="text-left flex-1">
-                  <p className="font-medium text-sm">{match.awayTeam.name}</p>
-                  <p className="text-xs text-muted-foreground">{match.awayTeam.tla}</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col items-end gap-1 ml-4">
-                {getStatusBadge(match)}
-                {match.stage && (
-                  <span className="text-xs text-muted-foreground">
-                    {match.stage}
-                  </span>
+                {/* Expanded goal scorers section */}
+                {isExpanded && matchDetails && (
+                  <div className="px-3 pb-3 border-t border-border/30 pt-2">
+                    <div className="grid grid-cols-2 gap-4">
+                      <GoalScorersDisplay details={matchDetails} isHome={true} />
+                      <GoalScorersDisplay details={matchDetails} isHome={false} />
+                    </div>
+                    {matchDetails.cards.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-border/20">
+                        <div className="grid grid-cols-2 gap-4 text-[10px] text-muted-foreground">
+                          <div className="text-right">
+                            {matchDetails.cards.filter(c => c.team === 'home').map((card, i) => (
+                              <div key={i}>
+                                {card.type === 'red' ? '🟥' : card.type === 'yellowred' ? '🟨🟥' : '🟨'} {card.player} {card.minute}&apos;
+                              </div>
+                            ))}
+                          </div>
+                          <div className="text-left">
+                            {matchDetails.cards.filter(c => c.team === 'away').map((card, i) => (
+                              <div key={i}>
+                                {card.type === 'red' ? '🟥' : card.type === 'yellowred' ? '🟨🟥' : '🟨'} {card.player} {card.minute}&apos;
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
-                {match.group && (
-                  <span className="text-xs text-muted-foreground">
-                    {match.group}
-                  </span>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {!showOnlyLive && matches.length > limit && (

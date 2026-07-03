@@ -1,9 +1,26 @@
 // Football Data.org Tournament Sync
 // Sync tournament data with Football Data.org API for real-time updates
+// Cross-references with OpenFootball API for accurate goal scorers and match details
 
 import { FootballDataMatch } from './football-data-api';
 import { R32_MATCHES } from './tournament-data';
 import { TEAMS, getTeamByName } from './tournament-data';
+import { OpenFootballData, getMatchDetails, MatchDetails } from './openfootball-api';
+
+export interface GoalEvent {
+  scorer: string;
+  minute: string;
+  team: 'home' | 'away';
+  penalty?: boolean;
+  ownGoal?: boolean;
+}
+
+export interface CardEvent {
+  player: string;
+  minute: string;
+  team: 'home' | 'away';
+  type: 'yellow' | 'red' | 'yellowred';
+}
 
 export interface TournamentMatch {
   id: string;
@@ -16,6 +33,9 @@ export interface TournamentMatch {
   winner?: string;
   status: "completed" | "live" | "upcoming";
   pens?: string;
+  goals?: GoalEvent[];
+  cards?: CardEvent[];
+  elapsedTime?: string;
 }
 
 // Get the actual on-field score (regularTime + extraTime, NOT including penalty shootout)
@@ -314,4 +334,83 @@ export function getGroupStandingsFromAPI(footballMatches: FootballDataMatch[]) {
   });
   
   return standings;
+}
+
+// Enrich a tournament match with OpenFootball data (goal scorers, cards, etc.)
+// OpenFootball is considered the golden source for match details
+export function enrichMatchWithOpenFootball(
+  match: TournamentMatch,
+  openFootballData: OpenFootballData | null
+): TournamentMatch {
+  if (!openFootballData) {
+    return match;
+  }
+
+  const homeTeam = TEAMS.find(t => t.id === match.homeTeamId);
+  const awayTeam = TEAMS.find(t => t.id === match.awayTeamId);
+
+  if (!homeTeam || !awayTeam) {
+    return match;
+  }
+
+  const details = getMatchDetails(openFootballData, homeTeam.name, awayTeam.name);
+
+  if (!details) {
+    return match;
+  }
+
+  // Use OpenFootball as the golden source for scores and penalties
+  const enrichedMatch: TournamentMatch = {
+    ...match,
+    homeScore: details.score.home,
+    awayScore: details.score.away,
+    goals: details.goals,
+    cards: details.cards,
+  };
+
+  // Update penalties if available
+  if (details.score.penalties) {
+    enrichedMatch.pens = `${details.score.penalties.home}-${details.score.penalties.away}`;
+    
+    // Determine winner from penalties
+    if (details.score.penalties.home > details.score.penalties.away) {
+      enrichedMatch.winner = match.homeTeamId;
+    } else if (details.score.penalties.away > details.score.penalties.home) {
+      enrichedMatch.winner = match.awayTeamId;
+    }
+  } else if (details.score.home > details.score.away) {
+    enrichedMatch.winner = match.homeTeamId;
+  } else if (details.score.away > details.score.home) {
+    enrichedMatch.winner = match.awayTeamId;
+  }
+
+  // Mark as completed if we have a final score
+  if (details.score.home !== undefined && details.score.away !== undefined) {
+    enrichedMatch.status = 'completed';
+  }
+
+  return enrichedMatch;
+}
+
+// Sync tournament with both APIs - Football Data for live status, OpenFootball for details
+export function syncTournamentWithBothAPIs(
+  footballMatches: FootballDataMatch[],
+  openFootballData: OpenFootballData | null
+) {
+  // First sync with Football Data API for live status
+  const synced = syncTournamentWithFootballData(footballMatches);
+  
+  // Then enrich with OpenFootball data for goal scorers, cards, etc.
+  const enrichedR32 = synced.r32.map(match => 
+    enrichMatchWithOpenFootball(match, openFootballData)
+  );
+  
+  const enrichedAll = synced.all.map(match => 
+    enrichMatchWithOpenFootball(match, openFootballData)
+  );
+  
+  return {
+    r32: enrichedR32,
+    all: enrichedAll,
+  };
 }
