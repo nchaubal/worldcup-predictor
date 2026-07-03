@@ -26,27 +26,27 @@ export default function PredictPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8 flex items-start justify-between gap-4">
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center shrink-0">
             <LayoutGrid className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Group Stage — Final Standings</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">
+            <h1 className="text-xl sm:text-2xl font-bold">Group Stage — Final Standings</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm mt-0.5">
               All 12 groups concluded · 32 teams advanced to Round of 32
             </p>
           </div>
         </div>
         <Link
           href="/bracket"
-          className={cn(buttonVariants({ size: "sm" }), "shrink-0 bg-primary text-primary-foreground gap-1.5")}
+          className={cn(buttonVariants({ size: "sm" }), "shrink-0 bg-primary text-primary-foreground gap-1.5 w-full sm:w-auto justify-center")}
         >
           Predict Knockouts <ChevronRight className="h-3.5 w-3.5" />
         </Link>
       </div>
 
-      <div className="mb-6 flex items-center gap-4 text-xs">
+      <div className="mb-6 flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
         <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-primary/20 ring-1 ring-primary/40 inline-block" /> Group winner</div>
         <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-accent/70 inline-block" /> Runner-up</div>
         <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-accent/30 inline-block" /> Best 3rd (advanced)</div>

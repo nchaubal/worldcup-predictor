@@ -399,21 +399,21 @@ export default function LeaguesPage() {
                         
                         return (
                           <div key={match.id} className="rounded-lg border border-border/50 p-3">
-                            <div className="flex items-center justify-between mb-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
                               <div className="flex items-center gap-2 text-sm">
                                 <span>{homeTeam?.flag}</span>
-                                <span className="font-medium">{homeTeam?.name}</span>
+                                <span className="font-medium truncate">{homeTeam?.name}</span>
                                 <span className="text-muted-foreground">vs</span>
-                                <span className="font-medium">{awayTeam?.name}</span>
+                                <span className="font-medium truncate">{awayTeam?.name}</span>
                                 <span>{awayTeam?.flag}</span>
                               </div>
                               {memberPred && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-xs shrink-0">
                                   Their pick: {memberPred.home_score}-{memberPred.away_score}
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <span className="text-xs text-muted-foreground">Your guess:</span>
                               <input
                                 type="number"

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Josefin_Sans } from "next/font/google";
 import "./globals.css";
 import { TournamentProviderSupabase } from "@/context/TournamentContextSupabase";
@@ -13,6 +13,13 @@ const josefinSans = Josefin_Sans({
 export const metadata: Metadata = {
   title: "World Cup Predictor 2026",
   description: "Predict matches, compete with friends, and follow the FIFA World Cup 2026",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({
