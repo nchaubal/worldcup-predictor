@@ -587,7 +587,7 @@ export default function BracketPage() {
         then CSS transform shrinks it to fit. We set the outer height
         to the post-scale height so the page flow collapses correctly.
       */}
-      <div style={{ height: bracketH || undefined }} className="overflow-hidden">
+      <div style={{ height: bracketH || undefined, width: BRACKET_W * scale || undefined }} className="overflow-visible">
         <div
           ref={bracketRef}
           style={{
