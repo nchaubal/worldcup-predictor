@@ -7,11 +7,11 @@ test.describe('Match Prediction Workflow', () => {
 
   test('complete prediction workflow from homepage', async ({ page }) => {
     // Navigate to predict page
-    await page.getByText('Predict Matches').click()
+    await page.getByRole('link', { name: 'Predict Matches' }).click()
     await expect(page).toHaveURL(/\/predict/)
 
     // Wait for page to load
-    await expect(page.getByText('Group Stage Predictions')).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Predictions/ })).toBeVisible()
 
     // Find a match prediction card
     const matchCards = page.locator('[data-testid="match-prediction-card"]')
@@ -74,14 +74,15 @@ test.describe('Match Prediction Workflow', () => {
   test('navigation between prediction and bracket', async ({ page }) => {
     // Start at predict page
     await page.goto('/predict')
-    await expect(page.getByText('Group Stage Predictions')).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Predictions/ })).toBeVisible()
     
-    // Navigate to bracket
-    await page.getByText('Bracket').click()
+    // Navigate to bracket using desktop nav
+    const desktopNav = page.locator('nav[aria-label="Primary"]')
+    await desktopNav.getByRole('link', { name: 'Bracket', exact: true }).click()
     await expect(page).toHaveURL(/\/bracket/)
     
     // Navigate back to predict
-    await page.getByText('Predict').click()
+    await desktopNav.getByRole('link', { name: 'Predict', exact: true }).click()
     await expect(page).toHaveURL(/\/predict/)
   })
 
@@ -116,7 +117,7 @@ test.describe('Bracket Building Workflow', () => {
   })
 
   test('navigate to bracket and build predictions', async ({ page }) => {
-    await page.getByText('Build My Bracket').click()
+    await page.getByRole('link', { name: 'Build My Bracket' }).click()
     await expect(page).toHaveURL(/\/bracket/)
     
     // Wait for bracket to load

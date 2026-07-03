@@ -6,9 +6,9 @@ test.describe('League Management Workflow', () => {
   })
 
   test('navigate to leagues page from homepage', async ({ page }) => {
-    await page.getByText('Create a League').click()
+    await page.getByRole('link', { name: /Create a League/ }).click()
     await expect(page).toHaveURL(/\/leagues/)
-    await expect(page.getByText('Leagues')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Leagues', exact: true })).toBeVisible()
   })
 
   test('create new league functionality', async ({ page }) => {
