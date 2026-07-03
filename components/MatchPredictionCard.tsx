@@ -21,8 +21,10 @@ export default function MatchPredictionCard({ match }: Props) {
   const [showAI, setShowAI] = useState(false);
   const [aiPred, setAiPred] = useState<MatchProbability | null>(null);
 
+  // Compute AI prediction when teams change
   useEffect(() => {
     if (match.homeTeam && match.awayTeam) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAiPred(predictMatch(match.homeTeam, match.awayTeam));
     }
   }, [match.homeTeam, match.awayTeam]);

@@ -211,6 +211,7 @@ export default function BracketPage() {
   // knockoutPredictions loads asynchronously from Supabase after auth
   // resolves, so seed local picks once they arrive (e.g. on page reload).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPicks((prev) => ({ ...knockoutPredictions, ...prev }));
   }, [knockoutPredictions]);
   const [history, setHistory]     = useState<Record<string, string>[]>([]);

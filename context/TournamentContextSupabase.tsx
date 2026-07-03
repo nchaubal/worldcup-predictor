@@ -43,76 +43,7 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Initialize auth state
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        if (!supabase) {
-          // Fallback to mock data if Supabase is not initialized
-          setLeagues([MOCK_LEAGUE]);
-          setCurrentUser({
-            userId: "user_1",
-            userName: "You",
-            avatar: "⚽",
-            predictions: [],
-            totalPoints: 0,
-          });
-          setIsLoading(false);
-          return;
-        }
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          setIsAuthenticated(true);
-          await loadUserData(user.id);
-        } else {
-          // Use mock data as fallback
-          setLeagues([MOCK_LEAGUE]);
-          setCurrentUser({
-            userId: "user_1",
-            userName: "You",
-            avatar: "⚽",
-            predictions: [],
-            totalPoints: 0,
-          });
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-        // Fallback to mock data
-        setLeagues([MOCK_LEAGUE]);
-        setCurrentUser({
-          userId: "user_1",
-          userName: "You",
-          avatar: "⚽",
-          predictions: [],
-          totalPoints: 0,
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase ? supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setIsAuthenticated(true);
-        const username = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'User';
-        await loadUserData(session.user.id, username);
-      } else if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false);
-        setCurrentUser(null);
-        setPredictions([]);
-        setKnockoutPredictions({});
-        setLeagues([]);
-      }
-    }) : { data: { subscription: null } };
-
-    return () => subscription?.unsubscribe();
-  }, []);
-
+  // Define loadUserData before useEffect that uses it
   const loadUserData = async (userId: string, username?: string) => {
     try {
       // Load or create user profile
@@ -168,6 +99,77 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       console.error('Error loading user data:', error);
     }
   };
+
+  // Initialize auth state
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        if (!supabase) {
+          // Fallback to mock data if Supabase is not initialized
+          setLeagues([MOCK_LEAGUE]);
+          setCurrentUser({
+            userId: "user_1",
+            userName: "You",
+            avatar: "⚽",
+            predictions: [],
+            totalPoints: 0,
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          setIsAuthenticated(true);
+          loadUserData(user.id);
+        } else {
+          // Use mock data as fallback
+          setLeagues([MOCK_LEAGUE]);
+          setCurrentUser({
+            userId: "user_1",
+            userName: "You",
+            avatar: "⚽",
+            predictions: [],
+            totalPoints: 0,
+          });
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        // Fallback to mock data
+        setLeagues([MOCK_LEAGUE]);
+        setCurrentUser({
+          userId: "user_1",
+          userName: "You",
+          avatar: "⚽",
+          predictions: [],
+          totalPoints: 0,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase ? supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        setIsAuthenticated(true);
+        const username = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'User';
+        loadUserData(session.user.id, username);
+      } else if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+        setPredictions([]);
+        setKnockoutPredictions({});
+        setLeagues([]);
+      }
+    }) : { data: { subscription: null } };
+
+    return () => subscription?.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setPrediction = useCallback(async (matchId: string, homeScore: number, awayScore: number) => {
     if (!currentUser || !isAuthenticated) return;
@@ -425,7 +427,7 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       console.error('Error getting leaderboard:', error);
       return [];
     }
-  }, [isAuthenticated, currentUser, leagues, getTotalPoints]);
+  }, [isAuthenticated, currentUser, getTotalPoints]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
