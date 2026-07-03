@@ -7,7 +7,7 @@ import { TEAMS, Team, R32_MATCHES } from "@/lib/tournament-data";
 import { syncTournamentWithFootballData } from "@/lib/football-data-sync";
 import { predictMatch } from "@/lib/ai-predictor";
 import { useFootballData } from "@/hooks/useFootballData";
-import { GitBranch, Brain, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo, Edit3, X } from "lucide-react";
+import { GitBranch, Brain, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo, Edit3, X, RefreshCw } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -325,14 +325,29 @@ function Col({ matches, picks, scores, onScorePick, showAI }: {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function BracketPage() {
   const { setKnockoutPrediction, knockoutPredictions, knockoutScores } = useTournamentSupabase();
-  const { matches: footballMatches, fetchWorldCupMatches } = useFootballData();
+  const { matches: footballMatches, fetchWorldCupMatches, loading: dataLoading } = useFootballData();
   const [picks, setPicks]         = useState<Record<string, string>>({});
   const [scores, setScores]       = useState<Record<string, { home: number; away: number }>>({});
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   // Fetch ALL World Cup matches so the bracket syncs across all rounds
   useEffect(() => {
     fetchWorldCupMatches();
   }, [fetchWorldCupMatches]);
+
+  // Auto-refresh every 60 seconds to catch live match updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchWorldCupMatches();
+      setLastRefresh(new Date());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [fetchWorldCupMatches]);
+
+  const handleRefresh = () => {
+    fetchWorldCupMatches();
+    setLastRefresh(new Date());
+  };
 
   // knockoutPredictions loads asynchronously from Supabase after auth
   // resolves, so seed local picks once they arrive (e.g. on page reload).
@@ -554,6 +569,15 @@ export default function BracketPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleRefresh}
+            disabled={dataLoading}
+            className="flex items-center gap-1.5 bg-muted/50 hover:bg-muted/70 border border-border/50 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            title={`Refresh live data (last: ${lastRefresh.toLocaleTimeString()})`}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${dataLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
           {history.length > 0 && (
             <button
               onClick={handleUndo}
