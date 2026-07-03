@@ -590,7 +590,7 @@ export default function BracketPage() {
         then CSS transform shrinks it to fit. On mobile, we allow horizontal
         scrolling to keep the bracket readable.
       */}
-      <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="overflow-x-auto sm:overflow-visible pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
         <div style={{ height: bracketH || undefined, width: BRACKET_W * scale, minWidth: BRACKET_W * MIN_SCALE }} className="overflow-visible">
         <div
           ref={bracketRef}
