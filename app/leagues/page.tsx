@@ -288,7 +288,12 @@ export default function LeaguesPage() {
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Exact score correct</span>
-              <Badge className="bg-primary/15 text-primary border-primary/30">+3 points</Badge>
+              <Badge className="bg-primary/15 text-primary border-primary/30">+5 points</Badge>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Correct goal margin</span>
+              <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">+2 points</Badge>
             </div>
             <Separator />
             <div className="flex items-center justify-between">
