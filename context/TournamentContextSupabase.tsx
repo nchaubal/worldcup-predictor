@@ -395,17 +395,29 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
     }
 
     try {
-      const targetLeagueId = leagueId || leagues[0]?.id;
-      if (!targetLeagueId) return [];
+      // Skip "global" or invalid league IDs - return current user only for now
+      // UUID format check: 8-4-4-4-12 hex characters
+      const isValidUUID = leagueId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(leagueId);
+      
+      if (!isValidUUID) {
+        // Return just the current user for global/invalid league
+        return [{
+          userId: currentUser.userId,
+          userName: currentUser.userName,
+          avatar: currentUser.avatar,
+          predictions: [],
+          totalPoints: getTotalPoints(),
+        }];
+      }
 
       // Nothing else recalculates user_points when match_results change, so
       // refresh every member's total before reading the leaderboard.
-      const members = await SupabaseService.getLeagueMembers(targetLeagueId);
+      const members = await SupabaseService.getLeagueMembers(leagueId);
       await Promise.all(
-        members.map((m) => SupabaseService.calculateUserPoints(m.id, targetLeagueId))
+        members.map((m) => SupabaseService.calculateUserPoints(m.id, leagueId))
       );
 
-      const userPoints = await SupabaseService.getUserPoints(targetLeagueId);
+      const userPoints = await SupabaseService.getUserPoints(leagueId);
       
       return userPoints.map(up => ({
         userId: up.user_id,
@@ -419,7 +431,7 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       console.error('Error getting leaderboard:', error);
       return [];
     }
-  }, [isAuthenticated, currentUser, leagues]);
+  }, [isAuthenticated, currentUser, leagues, getTotalPoints]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
