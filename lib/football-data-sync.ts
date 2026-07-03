@@ -1,7 +1,7 @@
 // Football Data.org Tournament Sync
 // Sync tournament data with Football Data.org API for real-time updates
 
-import { FootballDataMatch, footballDataApi } from './football-data-api';
+import { FootballDataMatch } from './football-data-api';
 import { R32_MATCHES } from './tournament-data';
 import { TEAMS, getTeamByName } from './tournament-data';
 
@@ -195,6 +195,7 @@ export function getMatchesByStage(footballMatches: FootballDataMatch[], stage: s
 export function getGroupStandingsFromAPI(footballMatches: FootballDataMatch[]) {
   const groupMatches = footballMatches.filter(match => match.stage === 'GROUP_STAGE' && match.group);
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const standings: Record<string, any[]> = {};
   
   // Initialize all groups

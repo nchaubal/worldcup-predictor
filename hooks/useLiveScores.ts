@@ -7,35 +7,53 @@ export function useLiveScores(pollInterval: number = 30000) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if API key is available
-    if (!process.env.NEXT_PUBLIC_API_FOOTBALL_KEY) {
-      setError('API key not configured. See LIVE_SCORES_SETUP.md for instructions.');
-      setLoading(false);
-      return;
-    }
+    let unsubscribe: (() => void) | undefined;
+    let mounted = true;
 
-    try {
-      const liveScoreService = getLiveScoreService();
+    const init = async () => {
+      // Check if API key is available
+      if (!process.env.NEXT_PUBLIC_API_FOOTBALL_KEY) {
+        if (mounted) {
+          setError('API key not configured. See LIVE_SCORES_SETUP.md for instructions.');
+          setLoading(false);
+        }
+        return;
+      }
 
-      // Subscribe to live score updates
-      const unsubscribe = liveScoreService.subscribe((updatedMatches) => {
-        setMatches(updatedMatches);
-        setLoading(false);
-        setError(null);
-      });
+      try {
+        const liveScoreService = getLiveScoreService();
 
-      // Start polling
-      liveScoreService.startPolling(pollInterval);
+        // Subscribe to live score updates
+        unsubscribe = liveScoreService.subscribe((updatedMatches) => {
+          if (mounted) {
+            setMatches(updatedMatches);
+            setLoading(false);
+            setError(null);
+          }
+        });
 
-      // Cleanup
-      return () => {
-        unsubscribe();
-        liveScoreService.stopPolling();
-      };
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to initialize live scores');
-      setLoading(false);
-    }
+        // Start polling
+        liveScoreService.startPolling(pollInterval);
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Failed to initialize live scores');
+          setLoading(false);
+        }
+      }
+    };
+
+    init();
+
+    // Cleanup
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+      try {
+        getLiveScoreService().stopPolling();
+      } catch {
+        // Service may not be initialized
+      }
+    };
   }, [pollInterval]);
 
   const refresh = useCallback(async () => {

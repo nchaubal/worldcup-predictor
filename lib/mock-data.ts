@@ -64,8 +64,8 @@ export function generateMockPredictions(): { [userId: string]: Prediction[] } {
     { matchId: "r32_8", homeScore: 0, awayScore: 1, predictedWinner: "esp" },
   ];
 
-  MOCK_USERS.forEach((user, userIndex) => {
-    mockPredictions[user.userId] = basePredictions.map((pred, index) => ({
+  MOCK_USERS.forEach((user, _userIndex) => {
+    mockPredictions[user.userId] = basePredictions.map((pred, _index) => ({
       ...pred,
       // Add some variation to make it realistic
       homeScore: pred.homeScore + Math.floor(Math.random() * 2) - 1,

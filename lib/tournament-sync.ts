@@ -1,7 +1,7 @@
 // Dynamic Tournament Data Sync with FIFA Live Scores
 // Automatically updates match status, scores, and winners based on live FIFA data
 
-import { R32_MATCHES, R16_MATCHES } from './tournament-data';
+import { R32_MATCHES } from './tournament-data';
 import { FIFAMatch } from './fifa-api';
 import { TEAMS } from './tournament-data';
 

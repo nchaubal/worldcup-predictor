@@ -173,7 +173,7 @@ export class SupabaseService {
       .order('joined_at', { ascending: false });
 
     if (error) throw error;
-    return ((data as any[]) || []).map((row) => row.leagues).filter(Boolean);
+    return ((data as unknown as { leagues: League }[]) || []).map((row) => row.leagues).filter(Boolean);
   }
 
   static async createLeague(name: string, createdBy: string): Promise<League> {
@@ -256,7 +256,7 @@ export class SupabaseService {
       .eq('league_id', leagueId);
 
     if (membersError) throw membersError;
-    const userIds = (members || []).map((m: any) => m.user_id);
+    const userIds = ((members as { user_id: string }[]) || []).map((m) => m.user_id);
     if (userIds.length === 0) return [];
 
     const { data: profiles, error: profilesError } = await supabase!
@@ -424,7 +424,7 @@ export class SupabaseService {
     return user;
   }
 
-  static onAuthStateChange(callback: (event: string, session: any) => void) {
+  static onAuthStateChange(callback: (event: string, session: { user?: { id: string; email?: string; user_metadata?: { username?: string } } } | null) => void) {
     this.checkSupabase();
     return supabase!.auth.onAuthStateChange(callback);
   }

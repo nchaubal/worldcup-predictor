@@ -61,9 +61,11 @@ class BBCSportService {
   }
 
   // Transform BBC data to our format
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private transformBBCData(data: any): BBCMatch[] {
     if (!data || !data.items) return [];
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return data.items.map((item: any) => ({
       id: item.id || Math.random().toString(36).substr(2, 9),
       title: item.title || 'Match',

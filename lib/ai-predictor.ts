@@ -25,7 +25,7 @@ export function predictMatch(homeTeam: Team, awayTeam: Team): MatchProbability {
   const awayWin = Math.round((rawAwayWin / total) * 100);
   const draw = 100 - homeWin - awayWin;
 
-  const avgStrength = (homeTeam.strength + awayTeam.strength) / 2;
+  const _avgStrength = (homeTeam.strength + awayTeam.strength) / 2;
   const expectedHomeGoals = parseFloat((1.2 + (homeTeam.strength / 100) * 1.8 - (awayTeam.strength / 100) * 0.5).toFixed(1));
   const expectedAwayGoals = parseFloat((0.9 + (awayTeam.strength / 100) * 1.5 - (homeTeam.strength / 100) * 0.5).toFixed(1));
 

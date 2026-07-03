@@ -302,13 +302,14 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       };
       setLeagues(prev => [convertedLeague, ...prev]);
       return convertedLeague;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; code?: string; details?: string; hint?: string; stack?: string };
       console.error('[Context.createLeague] Error:', {
-        message: error?.message,
-        code: error?.code,
-        details: error?.details,
-        hint: error?.hint,
-        stack: error?.stack
+        message: err?.message,
+        code: err?.code,
+        details: err?.details,
+        hint: err?.hint,
+        stack: err?.stack
       });
       throw error;
     }
