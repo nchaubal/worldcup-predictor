@@ -247,7 +247,7 @@ export class SupabaseService {
       .eq('league_id', leagueId);
     
     if (error) throw error;
-    return (data as any[])?.map(member => member.profiles) || [];
+    return (data as unknown as { profiles: Profile }[])?.map(member => member.profiles) || [];
   }
 
   // Prediction operations
@@ -386,9 +386,10 @@ export class SupabaseService {
       try {
         await this.createProfile(data.user.id, username);
         console.log('[signUp] Profile created successfully');
-      } catch (profileError: any) {
+      } catch (profileError: unknown) {
         // If profile creation fails due to duplicate (user already exists), that's ok
-        if (profileError?.code === '23505') {
+        const err = profileError as { code?: string };
+        if (err?.code === '23505') {
           console.log('[signUp] Profile already exists, continuing');
         } else {
           console.error('[signUp] Profile creation failed', profileError);
@@ -412,7 +413,7 @@ export class SupabaseService {
     return user;
   }
 
-  static onAuthStateChange(callback: (event: string, session: any) => void) {
+  static onAuthStateChange(callback: (event: string, session: { user?: { id: string; email?: string; user_metadata?: { username?: string } } } | null) => void) {
     this.checkSupabase();
     return supabase!.auth.onAuthStateChange(callback);
   }

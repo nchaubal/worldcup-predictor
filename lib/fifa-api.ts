@@ -61,9 +61,7 @@ class FIFAApiService {
   }
 
   // Parse FIFA website data
-  private parseFIFAData(html: string): FIFAMatch[] {
-    const matches: FIFAMatch[] = [];
-    
+  private parseFIFAData(_html: string): FIFAMatch[] {
     // This would parse real FIFA data if accessible
     // For now, return current real scores from FIFA
     return this.getCurrentFIFAScores();
@@ -71,11 +69,6 @@ class FIFAApiService {
 
   // Current FIFA scores based on real data
   private getCurrentFIFAScores(): FIFAMatch[] {
-    const now = new Date();
-    const currentHour = now.getHours();
-    
-    // Check if Mexico vs Ecuador is actually happening today
-    const isMexicoEcuadorLive = this.isMatchCurrentlyPlaying('Mexico', 'Ecuador');
     
     return [
       {

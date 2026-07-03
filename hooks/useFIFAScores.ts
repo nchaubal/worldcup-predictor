@@ -7,28 +7,44 @@ export function useFIFAScores(pollInterval: number = 60000) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const fifaApiService = getFIFAApiService();
+    let unsubscribe: (() => void) | undefined;
+    let mounted = true;
 
-      // Subscribe to live score updates
-      const unsubscribe = fifaApiService.subscribe((updatedMatches) => {
-        setMatches(updatedMatches);
-        setLoading(false);
-        setError(null);
-      });
+    const init = async () => {
+      try {
+        const fifaApiService = getFIFAApiService();
 
-      // Start polling
-      fifaApiService.startPolling(pollInterval);
+        // Subscribe to live score updates
+        unsubscribe = fifaApiService.subscribe((updatedMatches) => {
+          if (mounted) {
+            setMatches(updatedMatches);
+            setLoading(false);
+            setError(null);
+          }
+        });
 
-      // Cleanup
-      return () => {
-        unsubscribe();
-        fifaApiService.stopPolling();
-      };
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to initialize FIFA scores');
-      setLoading(false);
-    }
+        // Start polling
+        fifaApiService.startPolling(pollInterval);
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Failed to initialize FIFA scores');
+          setLoading(false);
+        }
+      }
+    };
+
+    init();
+
+    // Cleanup
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+      try {
+        getFIFAApiService().stopPolling();
+      } catch {
+        // Service may not be initialized
+      }
+    };
   }, [pollInterval]);
 
   const refresh = useCallback(async () => {

@@ -56,8 +56,9 @@ export function AuthButton() {
       setEmail("");
       setPassword("");
       setUsername("");
-    } catch (err: any) {
-      setError(err.message || "Authentication failed");
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      setError(error?.message || "Authentication failed");
     } finally {
       setLoading(false);
     }

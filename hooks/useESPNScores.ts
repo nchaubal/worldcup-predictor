@@ -7,28 +7,44 @@ export function useESPNScores(pollInterval: number = 30000) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const espnService = getESPNScoreService();
+    let unsubscribe: (() => void) | undefined;
+    let mounted = true;
 
-      // Subscribe to live score updates
-      const unsubscribe = espnService.subscribe((updatedMatches) => {
-        setMatches(updatedMatches);
-        setLoading(false);
-        setError(null);
-      });
+    const init = async () => {
+      try {
+        const espnService = getESPNScoreService();
 
-      // Start polling
-      espnService.startPolling(pollInterval);
+        // Subscribe to live score updates
+        unsubscribe = espnService.subscribe((updatedMatches) => {
+          if (mounted) {
+            setMatches(updatedMatches);
+            setLoading(false);
+            setError(null);
+          }
+        });
 
-      // Cleanup
-      return () => {
-        unsubscribe();
-        espnService.stopPolling();
-      };
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to initialize ESPN scores');
-      setLoading(false);
-    }
+        // Start polling
+        espnService.startPolling(pollInterval);
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Failed to initialize ESPN scores');
+          setLoading(false);
+        }
+      }
+    };
+
+    init();
+
+    // Cleanup
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+      try {
+        getESPNScoreService().stopPolling();
+      } catch {
+        // Service may not be initialized
+      }
+    };
   }, [pollInterval]);
 
   const refresh = useCallback(async () => {

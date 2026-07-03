@@ -62,6 +62,7 @@ export interface FootballDataCompetition {
     startDate: string;
     endDate: string;
     currentMatchday: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     winner?: any;
   };
 }
@@ -253,6 +254,7 @@ export class FootballDataApiService {
   }
 
   // Convert Football Data match to our app's match format
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   convertToAppMatch(match: FootballDataMatch): any {
     return {
       id: match.id.toString(),

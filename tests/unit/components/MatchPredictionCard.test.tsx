@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useTournament } from '@/context/TournamentContext'
 import MatchPredictionCard from '@/components/MatchPredictionCard'
@@ -56,6 +56,7 @@ describe('MatchPredictionCard', () => {
       deletePrediction: jest.fn(),
       exportPredictions: jest.fn(),
       importPredictions: jest.fn(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
   })
 
@@ -99,6 +100,7 @@ describe('MatchPredictionCard', () => {
     mockUseTournament.mockReturnValue({
       ...mockUseTournament(),
       predictions: [existingPrediction]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     render(<MatchPredictionCard match={mockMatch} />)

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 // Mock next/navigation
 jest.mock('next/navigation')
 jest.mock('next/link', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function MockLink({ children, href, ...props }: any) {
     return <a href={href} {...props}>{children}</a>
   }
