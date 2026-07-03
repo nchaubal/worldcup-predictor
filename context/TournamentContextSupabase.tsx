@@ -17,7 +17,8 @@ type TournamentContextType = {
   isLoading: boolean;
   isAuthenticated: boolean;
   setPrediction: (matchId: string, homeScore: number, awayScore: number) => void;
-  setKnockoutPrediction: (matchId: string, winnerId: string) => void;
+  setKnockoutPrediction: (matchId: string, winnerId: string, homeScore?: number, awayScore?: number) => void;
+  knockoutScores: { [matchId: string]: { home: number; away: number } };
   setPredictionPrediction: (predictedUserId: string, matchId: string, homeScore: number, awayScore: number) => void;
   deletePredictionPrediction: (predictedUserId: string, matchId: string) => void;
   createLeague: (name: string) => Promise<League>;
@@ -37,6 +38,7 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
   const [currentUser, setCurrentUser] = useState<UserPredictions | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [knockoutPredictions, setKnockoutPredictions] = useState<{ [matchId: string]: string }>({});
+  const [knockoutScores, setKnockoutScores] = useState<{ [matchId: string]: { home: number; away: number } }>({});
   const [predictionPredictions, setPredictionPredictions] = useState<PredictionPrediction[]>([]);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [actualResults] = useState<{ matchId: string; homeScore: number; awayScore: number }[]>([]);
@@ -86,10 +88,15 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
 
       const knockoutPreds = await SupabaseService.getKnockoutPredictions(userId);
       const formattedKnockout: { [matchId: string]: string } = {};
+      const formattedScores: { [matchId: string]: { home: number; away: number } } = {};
       knockoutPreds.forEach(pred => {
         formattedKnockout[pred.match_id] = pred.winner_team_id;
+        if (pred.home_score !== null && pred.away_score !== null) {
+          formattedScores[pred.match_id] = { home: pred.home_score!, away: pred.away_score! };
+        }
       });
       setKnockoutPredictions(formattedKnockout);
+      setKnockoutScores(formattedScores);
 
       // Load prediction predictions
       const predPreds = await SupabaseService.getPredictionPredictions(userId);
@@ -209,15 +216,18 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
     }
   }, [currentUser, isAuthenticated]);
 
-  const setKnockoutPrediction = useCallback(async (matchId: string, winnerId: string) => {
+  const setKnockoutPrediction = useCallback(async (matchId: string, winnerId: string, homeScore?: number, awayScore?: number) => {
     if (!currentUser || !isAuthenticated) return;
 
     try {
       // Update local state
       setKnockoutPredictions((prev) => ({ ...prev, [matchId]: winnerId }));
+      if (homeScore !== undefined && awayScore !== undefined) {
+        setKnockoutScores((prev) => ({ ...prev, [matchId]: { home: homeScore, away: awayScore } }));
+      }
 
       // Save to Supabase
-      await SupabaseService.upsertKnockoutPrediction(currentUser.userId, matchId, winnerId);
+      await SupabaseService.upsertKnockoutPrediction(currentUser.userId, matchId, winnerId, homeScore, awayScore);
 
     } catch (error) {
       console.error('Error saving knockout prediction:', error);
@@ -469,6 +479,7 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
         currentUser,
         predictions,
         knockoutPredictions,
+        knockoutScores,
         predictionPredictions,
         leagues,
         actualResults,

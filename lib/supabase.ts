@@ -48,6 +48,8 @@ export interface KnockoutPrediction {
   user_id: string;
   match_id: string;
   winner_team_id: string;
+  home_score?: number | null;
+  away_score?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -318,7 +320,9 @@ export class SupabaseService {
   static async upsertKnockoutPrediction(
     userId: string, 
     matchId: string, 
-    winnerTeamId: string
+    winnerTeamId: string,
+    homeScore?: number | null,
+    awayScore?: number | null
   ): Promise<KnockoutPrediction> {
     this.checkSupabase();
     const { data, error } = await supabase!
@@ -326,7 +330,9 @@ export class SupabaseService {
       .upsert({
         user_id: userId,
         match_id: matchId,
-        winner_team_id: winnerTeamId
+        winner_team_id: winnerTeamId,
+        home_score: homeScore ?? null,
+        away_score: awayScore ?? null
       })
       .select()
       .single();
