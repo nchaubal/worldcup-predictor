@@ -18,12 +18,39 @@ export interface TournamentMatch {
   pens?: string;
 }
 
-// football-data.org provides fullTime as the score at end of extra time (not including
-// penalty shootout). The penalties field is the shootout score (e.g., 4-6), not goals
-// to subtract. So we just use fullTime directly.
-function getOnFieldScore(fullTime?: number | null): number | null {
-  if (fullTime == null) return null;
-  return fullTime;
+// Get the actual on-field score (regularTime + extraTime, NOT including penalty shootout)
+// The API's fullTime field is unreliable for penalty matches - it sometimes includes shootout goals
+function getActualScore(fm: FootballDataMatch): { home: number | null; away: number | null } {
+  // For penalty shootout matches, use regularTime + extraTime
+  if (fm.score.duration === 'PENALTY_SHOOTOUT' || fm.score.duration === 'PENALTY_SHOOTOUTS') {
+    const regHome = fm.score.regularTime?.home ?? 0;
+    const regAway = fm.score.regularTime?.away ?? 0;
+    const etHome = fm.score.extraTime?.home ?? 0;
+    const etAway = fm.score.extraTime?.away ?? 0;
+    return { home: regHome + etHome, away: regAway + etAway };
+  }
+  // For extra time matches without penalties
+  if (fm.score.duration === 'EXTRA_TIME') {
+    const regHome = fm.score.regularTime?.home ?? fm.score.fullTime.home ?? 0;
+    const regAway = fm.score.regularTime?.away ?? fm.score.fullTime.away ?? 0;
+    const etHome = fm.score.extraTime?.home ?? 0;
+    const etAway = fm.score.extraTime?.away ?? 0;
+    return { home: regHome + etHome, away: regAway + etAway };
+  }
+  // For regular matches, use fullTime
+  return { home: fm.score.fullTime.home, away: fm.score.fullTime.away };
+}
+
+// Determine winner from penalty shootout when API winner is null
+function getWinnerFromPenalties(fm: FootballDataMatch, homeTeamId: string, awayTeamId: string): string | undefined {
+  if (fm.score.penalties?.home != null && fm.score.penalties?.away != null) {
+    if (fm.score.penalties.home > fm.score.penalties.away) {
+      return homeTeamId;
+    } else if (fm.score.penalties.away > fm.score.penalties.home) {
+      return awayTeamId;
+    }
+  }
+  return undefined;
 }
 
 export function syncMatchWithFootballData(match: TournamentMatch, footballMatches: FootballDataMatch[]): TournamentMatch {
@@ -51,27 +78,35 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
   // Check if teams are flipped in the API response
   const teamsFlipped = getTeamByName(footballMatch.homeTeam.name)?.id !== homeTeam.id;
 
-  // fullTime is the score at end of extra time (does not include penalty shootout goals)
-  const rawHome = getOnFieldScore(footballMatch.score.fullTime.home);
-  const rawAway = getOnFieldScore(footballMatch.score.fullTime.away);
-  const homeScore = teamsFlipped ? rawAway : rawHome;
-  const awayScore = teamsFlipped ? rawHome : rawAway;
+  // Get actual on-field score (handles penalty shootout matches correctly)
+  const actualScore = getActualScore(footballMatch);
+  const homeScore = teamsFlipped ? actualScore.away : actualScore.home;
+  const awayScore = teamsFlipped ? actualScore.home : actualScore.away;
 
   // Determine match status
   const isCompleted = footballMatch.status === 'FINISHED';
   const isLive = footballMatch.status === 'LIVE' || footballMatch.status === 'IN_PLAY' || footballMatch.status === 'PAUSED';
 
-  // Determine winner from the API winner field (accounts for penalty shootouts)
+  // Determine winner - use API winner field, or calculate from penalties if null
   let winner: string | undefined;
   if (isCompleted) {
     if (footballMatch.score.winner === 'HOME_TEAM') {
       winner = teamsFlipped ? match.awayTeamId : match.homeTeamId;
     } else if (footballMatch.score.winner === 'AWAY_TEAM') {
       winner = teamsFlipped ? match.homeTeamId : match.awayTeamId;
+    } else if (footballMatch.score.winner === null && footballMatch.score.penalties) {
+      // API winner is null for penalty shootouts - determine from penalty scores
+      const apiHomeId = match.homeTeamId;
+      const apiAwayId = match.awayTeamId;
+      if (teamsFlipped) {
+        winner = getWinnerFromPenalties(footballMatch, apiAwayId, apiHomeId);
+      } else {
+        winner = getWinnerFromPenalties(footballMatch, apiHomeId, apiAwayId);
+      }
     }
   }
 
-  // Handle penalties
+  // Handle penalties display
   let pens: string | undefined;
   if (footballMatch.score.penalties?.home != null && footballMatch.score.penalties?.away != null) {
     const homePenalties = teamsFlipped ? footballMatch.score.penalties.away : footballMatch.score.penalties.home;
@@ -143,17 +178,21 @@ export function convertFootballDataToTournamentMatch(footballMatch: FootballData
   const isCompleted = footballMatch.status === 'FINISHED';
   const isLive = footballMatch.status === 'LIVE' || footballMatch.status === 'IN_PLAY' || footballMatch.status === 'PAUSED';
 
-  // fullTime is the score at end of extra time (does not include penalty shootout goals)
-  const homeScore = getOnFieldScore(footballMatch.score.fullTime.home);
-  const awayScore = getOnFieldScore(footballMatch.score.fullTime.away);
+  // Get actual on-field score (handles penalty shootout matches correctly)
+  const actualScore = getActualScore(footballMatch);
+  const homeScore = actualScore.home;
+  const awayScore = actualScore.away;
 
-  // Determine winner from the API winner field (accounts for penalty shootouts)
+  // Determine winner - use API winner field, or calculate from penalties if null
   let winner: string | undefined;
   if (isCompleted) {
     if (footballMatch.score.winner === 'HOME_TEAM') {
       winner = homeTeam.id;
     } else if (footballMatch.score.winner === 'AWAY_TEAM') {
       winner = awayTeam.id;
+    } else if (footballMatch.score.winner === null && footballMatch.score.penalties) {
+      // API winner is null for penalty shootouts - determine from penalty scores
+      winner = getWinnerFromPenalties(footballMatch, homeTeam.id, awayTeam.id);
     }
   }
 

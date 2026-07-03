@@ -24,12 +24,16 @@ export interface FootballDataMatch {
   };
   score: {
     winner: 'HOME_TEAM' | 'AWAY_TEAM' | 'DRAW' | null;
-    duration: 'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUTS';
+    duration: 'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUT' | 'PENALTY_SHOOTOUTS';
     fullTime: {
       home: number | null;
       away: number | null;
     };
     halfTime: {
+      home: number | null;
+      away: number | null;
+    };
+    regularTime?: {
       home: number | null;
       away: number | null;
     };
