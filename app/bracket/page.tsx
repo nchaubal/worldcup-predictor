@@ -31,24 +31,21 @@ type MatchDef = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Slot — one team row inside a match card
+// Slot — one team row inside a match card (display only, click handled by parent)
 // ─────────────────────────────────────────────────────────────────────────────
-function Slot({ team, picked, lost, score, onClick, isResult }: {
+function Slot({ team, picked, lost, score, isResult }: {
   team: Team | null; picked: boolean; lost: boolean;
-  score?: number; onClick?: () => void; isResult?: boolean;
+  score?: number; isResult?: boolean;
 }) {
   if (!team) return (
     <div className="flex items-center gap-2 px-2.5 py-2 text-xs text-muted-foreground/40 italic">TBD</div>
   );
   return (
-    <button
-      onClick={onClick}
-      disabled={isResult || !onClick}
+    <div
       className={[
         "flex items-center gap-2 px-2.5 py-2 w-full text-left transition-all duration-150",
         picked       ? "bg-primary/20 border-l-[3px] border-primary"
           : lost     ? "opacity-25"
-          : !isResult ? "hover:bg-accent/70 cursor-pointer"
           : "",
       ].join(" ")}
     >
@@ -61,18 +58,17 @@ function Slot({ team, picked, lost, score, onClick, isResult }: {
           {score}
         </span>
       )}
-    </button>
+    </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MatchCard
 // ─────────────────────────────────────────────────────────────────────────────
-function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, status, onPick, onScorePick, showAI, venue, predictedScoreA, predictedScoreB }: {
+function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, status, onScorePick, showAI, venue, predictedScoreA, predictedScoreB }: {
   matchId: string; teamA: Team | null; teamB: Team | null;
   winnerId?: string | null; scoreA?: number; scoreB?: number;
   pens?: string; status?: "completed" | "live" | "upcoming";
-  onPick?: (teamId: string) => void; 
   onScorePick?: (teamId: string, homeScore: number, awayScore: number) => void;
   showAI?: boolean; venue?: string;
   predictedScoreA?: number; predictedScoreB?: number;
@@ -126,14 +122,15 @@ function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, stat
             )}
           </div>
         )}
-        {/* Teams */}
-        <div className="divide-y divide-border/25">
+        {/* Teams - clicking opens score picker instead of directly selecting winner */}
+        <div 
+          className={`divide-y divide-border/25 ${!isResult && !isLive && teamA && teamB ? 'cursor-pointer' : ''}`}
+          onClick={!isResult && !isLive && teamA && teamB ? () => { setScoreOpen(true); setAiOpen(false); setTempScoreA(predictedScoreA ?? 0); setTempScoreB(predictedScoreB ?? 0); } : undefined}
+        >
           <Slot team={teamA} picked={wonA} lost={isResult && !wonA && !!teamA}
-            score={scoreA} isResult={isResult || isLive}
-            onClick={!isResult && !isLive && teamA ? () => onPick?.(teamA.id) : undefined} />
+            score={scoreA} isResult={isResult || isLive} />
           <Slot team={teamB} picked={wonB} lost={isResult && !wonB && !!teamB}
-            score={scoreB} isResult={isResult || isLive}
-            onClick={!isResult && !isLive && teamB ? () => onPick?.(teamB.id) : undefined} />
+            score={scoreB} isResult={isResult || isLive} />
         </div>
         {/* Action buttons */}
         {!isResult && !isLive && teamA && teamB && (
@@ -146,7 +143,7 @@ function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, stat
             )}
             <button onClick={() => { setScoreOpen(v => !v); setAiOpen(false); setTempScoreA(predictedScoreA ?? 0); setTempScoreB(predictedScoreB ?? 0); }}
               className="flex-1 flex items-center justify-center gap-1 py-1 text-[10px] text-emerald-500/70 hover:text-emerald-500 transition-colors">
-              <Edit3 className="h-2.5 w-2.5" /> Score
+              <Edit3 className="h-2.5 w-2.5" /> Predict
             </button>
           </div>
         )}
@@ -294,10 +291,9 @@ function FinalConnector({ flip: _flip }: { flip?: boolean }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Column — a list of match cards, vertically spaced
 // ─────────────────────────────────────────────────────────────────────────────
-function Col({ matches, picks, scores, onPick, onScorePick, showAI }: {
+function Col({ matches, picks, scores, onScorePick, showAI }: {
   matches: MatchDef[]; picks: Record<string, string>;
   scores: Record<string, { home: number; away: number }>;
-  onPick: (id: string, tid: string) => void; 
   onScorePick: (id: string, tid: string, homeScore: number, awayScore: number) => void;
   showAI?: boolean;
 }) {
@@ -314,7 +310,6 @@ function Col({ matches, picks, scores, onPick, onScorePick, showAI }: {
           winnerId={m.winnerId ?? picks[m.id] ?? null}
           scoreA={m.scoreA} scoreB={m.scoreB} pens={m.pens}
           status={m.status} venue={m.venue}
-          onPick={tid => onPick(m.id, tid)}
           onScorePick={(tid, homeScore, awayScore) => onScorePick(m.id, tid, homeScore, awayScore)}
           predictedScoreA={scores[m.id]?.home}
           predictedScoreB={scores[m.id]?.away}
@@ -380,12 +375,6 @@ export default function BracketPage() {
     };
   }, [BRACKET_W]);
 
-  const handlePick = (id: string, tid: string) => {
-    setHistory(prev => [...prev, picks]);
-    setPicks(prev => ({ ...prev, [id]: tid }));
-    setKnockoutPrediction(id, tid);
-  };
-  
   const handleScorePick = (id: string, tid: string, homeScore: number, awayScore: number) => {
     setHistory(prev => [...prev, picks]);
     setPicks(prev => ({ ...prev, [id]: tid }));
@@ -627,15 +616,15 @@ export default function BracketPage() {
           <div className="flex items-stretch" style={{ width: BRACKET_W }}>
 
             {/* Left R32 */}
-            <Col matches={leftR32} picks={picks} scores={scores} onPick={handlePick} onScorePick={handleScorePick} showAI />
+            <Col matches={leftR32} picks={picks} scores={scores} onScorePick={handleScorePick} showAI />
             <Connector pairs={4} />
 
             {/* Left R16 */}
-            <Col matches={leftR16} picks={picks} scores={scores} onPick={handlePick} onScorePick={handleScorePick} showAI />
+            <Col matches={leftR16} picks={picks} scores={scores} onScorePick={handleScorePick} showAI />
             <Connector pairs={2} />
 
             {/* Left QF */}
-            <Col matches={leftQF} picks={picks} scores={scores} onPick={handlePick} onScorePick={handleScorePick} showAI />
+            <Col matches={leftQF} picks={picks} scores={scores} onScorePick={handleScorePick} showAI />
             {/* QF→SF connector: 2 QF matches merge into 1 SF */}
             <SFConnector flip={false} />
 
@@ -646,7 +635,6 @@ export default function BracketPage() {
                 teamA={TEAMS.find(t => t.id === sf[0].teamAId) ?? null}
                 teamB={TEAMS.find(t => t.id === sf[0].teamBId) ?? null}
                 winnerId={sf[0].winnerId ?? picks["sf_1"] ?? null}
-                onPick={tid => handlePick("sf_1", tid)}
                 onScorePick={(tid, homeScore, awayScore) => handleScorePick("sf_1", tid, homeScore, awayScore)}
                 predictedScoreA={scores["sf_1"]?.home}
                 predictedScoreB={scores["sf_1"]?.away}
@@ -664,7 +652,6 @@ export default function BracketPage() {
                 teamB={TEAMS.find(t => t.id === finalMatch.teamBId) ?? null}
                 winnerId={finalMatch.winnerId}
                 venue="MetLife"
-                onPick={tid => handlePick("final", tid)}
                 onScorePick={(tid, homeScore, awayScore) => handleScorePick("final", tid, homeScore, awayScore)}
                 predictedScoreA={scores["final"]?.home}
                 predictedScoreB={scores["final"]?.away}
@@ -688,7 +675,6 @@ export default function BracketPage() {
                 teamA={TEAMS.find(t => t.id === sf[1].teamAId) ?? null}
                 teamB={TEAMS.find(t => t.id === sf[1].teamBId) ?? null}
                 winnerId={sf[1].winnerId ?? picks["sf_2"] ?? null}
-                onPick={tid => handlePick("sf_2", tid)}
                 onScorePick={(tid, homeScore, awayScore) => handleScorePick("sf_2", tid, homeScore, awayScore)}
                 predictedScoreA={scores["sf_2"]?.home}
                 predictedScoreB={scores["sf_2"]?.away}
@@ -697,13 +683,13 @@ export default function BracketPage() {
             </div>
             <SFConnector flip />
 
-            <Col matches={rightQF} picks={picks} scores={scores} onPick={handlePick} onScorePick={handleScorePick} showAI />
+            <Col matches={rightQF} picks={picks} scores={scores} onScorePick={handleScorePick} showAI />
             <Connector pairs={2} flip />
 
-            <Col matches={rightR16} picks={picks} scores={scores} onPick={handlePick} onScorePick={handleScorePick} showAI />
+            <Col matches={rightR16} picks={picks} scores={scores} onScorePick={handleScorePick} showAI />
             <Connector pairs={4} flip />
 
-            <Col matches={rightR32} picks={picks} scores={scores} onPick={handlePick} onScorePick={handleScorePick} showAI />
+            <Col matches={rightR32} picks={picks} scores={scores} onScorePick={handleScorePick} showAI />
 
           </div>
         </div>
