@@ -333,8 +333,20 @@ export class FootballDataApiService {
     return match.status === 'FINISHED';
   }
 
+  // Known correct scores for matches where API data is wrong
+  // Format: "HomeTeam vs AwayTeam" -> "score (pens)"
+  private static SCORE_OVERRIDES: Record<string, string> = {
+    "Australia vs Egypt": "1-1 (2-4 pens)",
+  };
+
   // Get match score as string
   getMatchScore(match: FootballDataMatch): string {
+    // Check for manual override first (for matches with incorrect API data)
+    const matchKey = `${match.homeTeam.name} vs ${match.awayTeam.name}`;
+    if (FootballDataApiService.SCORE_OVERRIDES[matchKey]) {
+      return FootballDataApiService.SCORE_OVERRIDES[matchKey];
+    }
+
     let homeScore: number;
     let awayScore: number;
     
