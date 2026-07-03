@@ -140,27 +140,56 @@ export class SupabaseService {
     this.checkSupabase();
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     
+    console.log('[createLeague] Starting league creation', { name, code, createdBy });
+    
     const { data, error } = await supabase!
       .from('leagues')
       .insert({ name, code, creator_id: createdBy })
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('[createLeague] Failed to insert league', { 
+        errorCode: error.code, 
+        errorMessage: error.message, 
+        errorDetails: error.details,
+        errorHint: error.hint 
+      });
+      throw error;
+    }
+    
+    console.log('[createLeague] League created successfully', { leagueId: data.id, code: data.code });
     
     // Add creator as member
-    await this.joinLeague(data.id, createdBy);
+    try {
+      await this.joinLeague(data.id, createdBy);
+      console.log('[createLeague] Creator added as member');
+    } catch (joinError) {
+      console.error('[createLeague] Failed to add creator as member', joinError);
+      throw joinError;
+    }
     
     return data;
   }
 
   static async joinLeague(leagueId: string, userId: string): Promise<void> {
     this.checkSupabase();
+    console.log('[joinLeague] Joining league', { leagueId, userId });
+    
     const { error } = await supabase!
       .from('league_members')
       .insert({ league_id: leagueId, user_id: userId });
     
-    if (error) throw error;
+    if (error) {
+      console.error('[joinLeague] Failed to join league', {
+        errorCode: error.code,
+        errorMessage: error.message,
+        errorDetails: error.details,
+        errorHint: error.hint
+      });
+      throw error;
+    }
+    console.log('[joinLeague] Successfully joined league');
   }
 
   static async getLeagueByCode(code: string): Promise<League | null> {

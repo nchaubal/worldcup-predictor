@@ -271,13 +271,22 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
   }, [currentUser, isAuthenticated]);
 
   const createLeague = useCallback(async (name: string): Promise<League> => {
+    console.log('[Context.createLeague] Called with', { 
+      name, 
+      currentUser: currentUser?.userId, 
+      isAuthenticated 
+    });
+    
     if (!currentUser || !isAuthenticated) {
-      // Return mock league for demo
+      console.log('[Context.createLeague] Not authenticated, returning mock league');
       return MOCK_LEAGUE;
     }
 
     try {
+      console.log('[Context.createLeague] Calling SupabaseService.createLeague');
       const newLeague = await SupabaseService.createLeague(name, currentUser.userId);
+      console.log('[Context.createLeague] League created', newLeague);
+      
       const convertedLeague: League = {
         id: newLeague.id,
         name: newLeague.name,
@@ -287,8 +296,14 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       };
       setLeagues(prev => [convertedLeague, ...prev]);
       return convertedLeague;
-    } catch (error) {
-      console.error('Error creating league:', error);
+    } catch (error: any) {
+      console.error('[Context.createLeague] Error:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        stack: error?.stack
+      });
       throw error;
     }
   }, [currentUser, isAuthenticated]);
