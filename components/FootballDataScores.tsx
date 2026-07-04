@@ -180,8 +180,6 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
             const matchDetails = getMatchDetails(match.homeTeam.name, match.awayTeam.name);
             const isExpanded = expandedMatch === match.id;
             const hasGoals = matchDetails && matchDetails.goals.length > 0;
-            const homeGoals = matchDetails?.goals.filter(g => g.team === 'home') || [];
-            const awayGoals = matchDetails?.goals.filter(g => g.team === 'away') || [];
 
             return (
               <div
@@ -196,24 +194,13 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
                   className={`flex items-center justify-between p-3 ${hasGoals ? 'cursor-pointer hover:bg-accent/40' : ''}`}
                   onClick={() => hasGoals && setExpandedMatch(isExpanded ? null : match.id)}
                 >
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="text-right flex-1">
-                      <p className="font-medium text-sm">{match.homeTeam.name}</p>
-                      {/* Show goal scorers inline for home team */}
-                      {homeGoals.length > 0 && (
-                        <p className="text-[10px] text-muted-foreground truncate max-w-[120px] ml-auto">
-                          {homeGoals.map((g, i) => (
-                            <span key={i}>
-                              ⚽ {g.scorer} {g.minute}&apos;{g.penalty ? '(P)' : ''}{g.ownGoal ? '(OG)' : ''}
-                              {i < homeGoals.length - 1 && ', '}
-                            </span>
-                          ))}
-                        </p>
-                      )}
-                      {homeGoals.length === 0 && <p className="text-xs text-muted-foreground">{match.homeTeam.tla}</p>}
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className="text-right flex-1 min-w-0">
+                      <p className="font-medium text-xs sm:text-sm truncate">{match.homeTeam.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{match.homeTeam.tla}</p>
                     </div>
 
-                    <div className="px-3 text-center">
+                    <div className="px-2 sm:px-3 text-center shrink-0">
                       {getScoreDisplay(match)}
                       {/* Show elapsed time for live matches */}
                       {match.isLive && (
@@ -223,37 +210,26 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
                       )}
                     </div>
 
-                    <div className="text-left flex-1">
-                      <p className="font-medium text-sm">{match.awayTeam.name}</p>
-                      {/* Show goal scorers inline for away team */}
-                      {awayGoals.length > 0 && (
-                        <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">
-                          {awayGoals.map((g, i) => (
-                            <span key={i}>
-                              ⚽ {g.scorer} {g.minute}&apos;{g.penalty ? '(P)' : ''}{g.ownGoal ? '(OG)' : ''}
-                              {i < awayGoals.length - 1 && ', '}
-                            </span>
-                          ))}
-                        </p>
-                      )}
-                      {awayGoals.length === 0 && <p className="text-xs text-muted-foreground">{match.awayTeam.tla}</p>}
+                    <div className="text-left flex-1 min-w-0">
+                      <p className="font-medium text-xs sm:text-sm truncate">{match.awayTeam.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{match.awayTeam.tla}</p>
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end gap-1 ml-4">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col items-end gap-1 ml-2 sm:ml-4 shrink-0">
+                    <div className="flex items-center gap-1 sm:gap-2">
                       {getStatusBadge(match)}
                       {hasGoals && (
-                        isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        isExpanded ? <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                       )}
                     </div>
                     {match.stage && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">
                         {match.stage}
                       </span>
                     )}
                     {match.group && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">
                         {match.group}
                       </span>
                     )}
