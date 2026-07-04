@@ -38,26 +38,26 @@ export interface TournamentMatch {
   elapsedTime?: string;
 }
 
-// Get the actual on-field score (regularTime + extraTime, NOT including penalty shootout)
-// The API's fullTime field is unreliable for penalty matches - it sometimes includes shootout goals
+// Get the actual on-field score (the final score at end of play)
+// For extra time matches, fullTime already includes extra time goals
+// For penalty matches, we need regularTime + extraTime (fullTime may be unreliable)
 function getActualScore(fm: FootballDataMatch): { home: number | null; away: number | null } {
-  // For penalty shootout matches, use regularTime + extraTime
+  // For penalty shootout matches, calculate from regularTime + extraTime
+  // because fullTime can be unreliable for penalty matches
   if (fm.score.duration === 'PENALTY_SHOOTOUT' || fm.score.duration === 'PENALTY_SHOOTOUTS') {
-    const regHome = fm.score.regularTime?.home ?? 0;
-    const regAway = fm.score.regularTime?.away ?? 0;
-    const etHome = fm.score.extraTime?.home ?? 0;
-    const etAway = fm.score.extraTime?.away ?? 0;
-    return { home: regHome + etHome, away: regAway + etAway };
+    // If regularTime is available, use it + extraTime
+    if (fm.score.regularTime?.home != null && fm.score.regularTime?.away != null) {
+      const regHome = fm.score.regularTime.home;
+      const regAway = fm.score.regularTime.away;
+      const etHome = fm.score.extraTime?.home ?? 0;
+      const etAway = fm.score.extraTime?.away ?? 0;
+      return { home: regHome + etHome, away: regAway + etAway };
+    }
+    // Otherwise fall back to fullTime
+    return { home: fm.score.fullTime.home, away: fm.score.fullTime.away };
   }
-  // For extra time matches without penalties
-  if (fm.score.duration === 'EXTRA_TIME') {
-    const regHome = fm.score.regularTime?.home ?? fm.score.fullTime.home ?? 0;
-    const regAway = fm.score.regularTime?.away ?? fm.score.fullTime.away ?? 0;
-    const etHome = fm.score.extraTime?.home ?? 0;
-    const etAway = fm.score.extraTime?.away ?? 0;
-    return { home: regHome + etHome, away: regAway + etAway };
-  }
-  // For regular matches, use fullTime
+  // For extra time and regular matches, fullTime is the correct final score
+  // (fullTime already includes extra time goals when applicable)
   return { home: fm.score.fullTime.home, away: fm.score.fullTime.away };
 }
 

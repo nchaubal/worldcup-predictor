@@ -289,8 +289,9 @@ export const R32_MATCHES: R32Match[] = [
   { id: "r32_12", homeTeamId: "por", awayTeamId: "cro", date: "Thu Jul 2",  venue: "Toronto",      homeScore: 2, awayScore: 1, winner: "por", status: "completed" },
   { id: "r32_13", homeTeamId: "sui", awayTeamId: "alg", date: "Thu Jul 2",  venue: "Vancouver",    homeScore: 2, awayScore: 0, winner: "sui", status: "completed" },
   { id: "r32_14", homeTeamId: "aus", awayTeamId: "egy", date: "Fri Jul 3",  venue: "Arlington",    homeScore: 1, awayScore: 1, pens: "2-4", winner: "egy", status: "completed" },
-  // Live / Upcoming
-  { id: "r32_15", homeTeamId: "arg", awayTeamId: "cpv", date: "Fri Jul 3",  venue: "Miami",        status: "live" },
+  // Completed today
+  { id: "r32_15", homeTeamId: "arg", awayTeamId: "cpv", date: "Fri Jul 3",  venue: "Miami",        homeScore: 3, awayScore: 2, winner: "arg", status: "completed" },
+  // Upcoming
   { id: "r32_16", homeTeamId: "col", awayTeamId: "gha", date: "Fri Jul 3",  venue: "Kansas City",  status: "upcoming" },
 ];
 
