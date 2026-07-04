@@ -74,11 +74,13 @@ export async function fetchOpenFootballData(): Promise<OpenFootballData> {
 }
 
 // Normalize team names for matching between APIs
+// Maps various name formats to a canonical form
 const TEAM_NAME_MAP: Record<string, string> = {
   'United States': 'USA',
   'Korea Republic': 'South Korea',
   'Türkiye': 'Turkey',
-  'Bosnia-Herzegovina': 'Bosnia and Herzegovina',
+  'Bosnia-Herzegovina': 'Bosnia & Herzegovina',  // football-data.org → OpenFootball
+  'Bosnia and Herzegovina': 'Bosnia & Herzegovina',
   'DR Congo': 'Congo DR',
   'Côte d\'Ivoire': 'Ivory Coast',
   'Cape Verde': 'Cabo Verde',
