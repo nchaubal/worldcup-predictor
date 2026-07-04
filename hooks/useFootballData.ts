@@ -98,6 +98,25 @@ export const useFootballData = () => {
         isFinished: footballDataApi.isMatchFinished(match),
       }));
       
+      // Sort: live matches first, then finished (most recent first), then upcoming
+      matchesWithDetails.sort((a, b) => {
+        // Live matches always first
+        if (a.isLive && !b.isLive) return -1;
+        if (!a.isLive && b.isLive) return 1;
+        
+        // Finished matches before upcoming
+        if (a.isFinished && !b.isFinished && !b.isLive) return -1;
+        if (!a.isFinished && !a.isLive && b.isFinished) return 1;
+        
+        // For finished matches, most recent first (descending by date)
+        if (a.isFinished && b.isFinished) {
+          return new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime();
+        }
+        
+        // For upcoming matches, soonest first (ascending by date)
+        return new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime();
+      });
+      
       setMatches(matchesWithDetails);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch matches');
