@@ -1,5 +1,5 @@
 // Hook for using OpenFootball API data
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   fetchOpenFootballData, 
   getMatchDetails, 
@@ -11,6 +11,7 @@ export function useOpenFootball() {
   const [data, setData] = useState<OpenFootballData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasFetched = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -27,7 +28,10 @@ export function useOpenFootball() {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    if (!hasFetched.current) {
+      hasFetched.current = true;
+      fetchData();
+    }
   }, [fetchData]);
 
   const getDetails = useCallback(

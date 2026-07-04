@@ -175,7 +175,6 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
     }) : { data: { subscription: null } };
 
     return () => subscription?.unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setPrediction = useCallback(async (matchId: string, homeScore: number, awayScore: number) => {
