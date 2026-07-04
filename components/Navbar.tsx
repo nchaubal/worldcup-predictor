@@ -37,7 +37,7 @@ export default function Navbar() {
               alt="FIFA World Cup 2026"
               width={960}
               height={1482}
-              className="h-9 w-auto rounded-md transition-transform duration-200 ease-out group-hover:scale-110"
+              className="h-9 w-8 rounded-md transition-transform duration-200 ease-out group-hover:scale-110"
             />
             <div className="hidden sm:block text-sm font-bold leading-none text-foreground whitespace-nowrap">
               Boom FIFA World Cup 2026™ Predictor

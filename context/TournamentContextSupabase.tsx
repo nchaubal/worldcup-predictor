@@ -25,6 +25,7 @@ type TournamentContextType = {
   joinLeague: (code: string) => Promise<League | null>;
   updateUserName: (name: string) => void;
   getLeaderboard: (leagueId?: string) => Promise<UserPredictions[]>;
+  snapshotKnockoutStandings: (leagueId: string) => Promise<void>;
   getTotalPoints: () => number;
   getPointsBreakdown: () => { total: number; exact: number; margin: number; result: number; prediction: number };
   signIn: (email: string, password: string) => Promise<void>;
@@ -430,13 +431,20 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       );
 
       const userPoints = await SupabaseService.getUserPoints(leagueId);
-      
+
       return userPoints.map(up => ({
         userId: up.user_id,
         userName: up.profiles.username,
         avatar: up.profiles.avatar,
         predictions: [],
         totalPoints: up.total_points,
+        pointsBreakdown: {
+          exact: up.exact_predictions,
+          margin: up.margin_predictions,
+          result: up.result_predictions,
+          prediction: up.prediction_predictions,
+          knockout: up.knockout_points,
+        },
       })).sort((a, b) => b.totalPoints - a.totalPoints);
 
     } catch (error) {
@@ -444,6 +452,10 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       return [];
     }
   }, [isAuthenticated, currentUser, getTotalPoints]);
+
+  const snapshotKnockoutStandings = useCallback(async (leagueId: string) => {
+    await SupabaseService.snapshotKnockoutStandings(leagueId);
+  }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
@@ -492,6 +504,7 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
         joinLeague,
         updateUserName,
         getLeaderboard,
+        snapshotKnockoutStandings,
         getTotalPoints,
         getPointsBreakdown,
         signIn,

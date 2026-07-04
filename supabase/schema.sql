@@ -77,8 +77,26 @@ CREATE TABLE IF NOT EXISTS user_points (
   margin_predictions INTEGER DEFAULT 0,
   result_predictions INTEGER DEFAULT 0,
   prediction_predictions INTEGER DEFAULT 0,
+  -- Round-weighted + standing-adjusted (see calculate_user_points and
+  -- knockout_standing_snapshot below), so unlike the columns above this
+  -- can't be reconstructed in the UI as count x fixed weight.
+  knockout_points INTEGER DEFAULT 0,
   last_calculated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(user_id, league_id)
+);
+
+-- Locks in each league member's "punish the leader" scoring multiplier once,
+-- based on standings the moment the knockout stage begins. See
+-- snapshot_knockout_standings() below for how/when this gets populated.
+CREATE TABLE IF NOT EXISTS knockout_standing_snapshot (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  league_id UUID REFERENCES leagues(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  snapshot_rank INTEGER NOT NULL,
+  total_players INTEGER NOT NULL,
+  standing_multiplier NUMERIC(4,3) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(league_id, user_id)
 );
 
 -- Prediction predictions (users predicting other users' predictions)
@@ -142,6 +160,48 @@ CREATE TRIGGER on_auth_user_created
     FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
 -- Function to calculate user points
+-- Locks in each member's standing multiplier for the rest of the
+-- tournament based on current total_points rank at call time. Call
+-- explicitly when a league's knockout stage begins - no automatic
+-- round-transition trigger exists in this app.
+CREATE OR REPLACE FUNCTION snapshot_knockout_standings(p_league_id UUID)
+RETURNS void AS $$
+DECLARE
+  member_count INTEGER;
+BEGIN
+  PERFORM calculate_user_points(lm.user_id, p_league_id)
+  FROM league_members lm
+  WHERE lm.league_id = p_league_id;
+
+  SELECT COUNT(*) INTO member_count FROM league_members WHERE league_id = p_league_id;
+
+  INSERT INTO knockout_standing_snapshot (league_id, user_id, snapshot_rank, total_players, standing_multiplier)
+  SELECT
+    p_league_id,
+    ranked.user_id,
+    ranked.rnk,
+    member_count,
+    0.7 + 0.8 * ((ranked.rnk - 1)::numeric / GREATEST(member_count - 1, 1))
+  FROM (
+    SELECT user_id, ROW_NUMBER() OVER (ORDER BY total_points DESC) AS rnk
+    FROM user_points
+    WHERE league_id = p_league_id
+  ) ranked
+  ON CONFLICT (league_id, user_id) DO UPDATE SET
+    snapshot_rank = EXCLUDED.snapshot_rank,
+    total_players = EXCLUDED.total_players,
+    standing_multiplier = EXCLUDED.standing_multiplier,
+    created_at = NOW();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Round weights (R16 1.25x, QF 1.5x, SF 2x, Final 3x; R32/group unaffected)
+-- and the locked-in standing multiplier apply to knockout points only;
+-- group-stage scoring and prediction-predictions are unchanged.
+-- MUST stay SECURITY DEFINER (see LANGUAGE clause at the end) - it writes
+-- to user_points on behalf of every league member, not just the caller.
+-- CREATE OR REPLACE does not preserve this from a prior version, so any
+-- future edit to this function must keep re-specifying it.
 CREATE OR REPLACE FUNCTION calculate_user_points(p_user_id UUID, p_league_id UUID)
 RETURNS INTEGER AS $$
 DECLARE
@@ -150,11 +210,14 @@ DECLARE
     margin_count INTEGER := 0;
     result_count INTEGER := 0;
     prediction_count INTEGER := 0;
+    knockout_points_raw NUMERIC := 0;
+    knockout_points_val INTEGER := 0;
+    standing_multiplier NUMERIC := 1.0;
 BEGIN
     -- Calculate points from group predictions
-    SELECT 
+    SELECT
         COALESCE(SUM(
-            CASE 
+            CASE
                 -- Exact score: 5 points
                 WHEN mr.home_score = gp.home_score AND mr.away_score = gp.away_score THEN 5
                 -- Correct margin: 2 points
@@ -167,31 +230,50 @@ BEGIN
         COALESCE(SUM(CASE WHEN mr.home_score = gp.home_score AND mr.away_score = gp.away_score THEN 1 ELSE 0 END), 0),
         COALESCE(SUM(CASE WHEN (mr.home_score - mr.away_score) = (gp.home_score - gp.away_score)
                          AND NOT (mr.home_score = gp.home_score AND mr.away_score = gp.away_score) THEN 1 ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN SIGN(mr.home_score - mr.away_score) = SIGN(gp.home_score - gp.away_score) 
+        COALESCE(SUM(CASE WHEN SIGN(mr.home_score - mr.away_score) = SIGN(gp.home_score - gp.away_score)
                          AND NOT (mr.home_score = gp.home_score AND mr.away_score = gp.away_score)
                          AND NOT ((mr.home_score - mr.away_score) = (gp.home_score - gp.away_score)) THEN 1 ELSE 0 END), 0)
     INTO total_points, exact_count, margin_count, result_count
     FROM group_predictions gp
     LEFT JOIN match_results mr ON gp.match_id = mr.match_id
     WHERE gp.user_id = p_user_id AND mr.completed_at IS NOT NULL;
-    
-    -- Calculate points from knockout predictions
-    SELECT 
-        COALESCE(total_points, 0) + COALESCE(SUM(
-            CASE 
-                WHEN kp.winner_team_id = mr.actual_winner THEN 2
-                ELSE 0
-            END
-        ), 0)
-    INTO total_points
+
+    -- Standing multiplier locked in via snapshot_knockout_standings(); 1.0
+    -- (no adjustment) until a snapshot has been taken for this league.
+    SELECT kss.standing_multiplier INTO standing_multiplier
+    FROM knockout_standing_snapshot kss
+    WHERE kss.league_id = p_league_id AND kss.user_id = p_user_id;
+    standing_multiplier := COALESCE(standing_multiplier, 1.0);
+
+    -- Calculate points from knockout predictions: round-weighted, then
+    -- standing-adjusted.
+    SELECT COALESCE(SUM(
+        CASE
+            WHEN kp.winner_team_id = mr.actual_winner THEN
+                2 * (
+                    CASE
+                        WHEN kp.match_id LIKE 'r16_%' THEN 1.25
+                        WHEN kp.match_id LIKE 'qf_%'  THEN 1.5
+                        WHEN kp.match_id LIKE 'sf_%'  THEN 2.0
+                        WHEN kp.match_id = 'final'    THEN 3.0
+                        ELSE 1.0
+                    END
+                ) * standing_multiplier
+            ELSE 0
+        END
+    ), 0)
+    INTO knockout_points_raw
     FROM knockout_predictions kp
     LEFT JOIN match_results mr ON kp.match_id = mr.match_id
     WHERE kp.user_id = p_user_id AND mr.completed_at IS NOT NULL;
-    
+
+    knockout_points_val := ROUND(knockout_points_raw)::INTEGER;
+    total_points := total_points + knockout_points_val;
+
     -- Calculate points from predicting other users' predictions (3 points per correct prediction)
-    SELECT 
+    SELECT
         COALESCE(total_points, 0) + COALESCE(SUM(
-            CASE 
+            CASE
                 WHEN pp.predicted_home_score = gp.home_score AND pp.predicted_away_score = gp.away_score THEN 3
                 ELSE 0
             END
@@ -201,22 +283,23 @@ BEGIN
     FROM prediction_predictions pp
     INNER JOIN group_predictions gp ON pp.predicted_user_id = gp.user_id AND pp.match_id = gp.match_id
     WHERE pp.predictor_user_id = p_user_id;
-    
+
     -- Update user points table
-    INSERT INTO user_points (user_id, league_id, total_points, exact_predictions, margin_predictions, result_predictions, prediction_predictions, last_calculated_at)
-    VALUES (p_user_id, p_league_id, total_points, exact_count, margin_count, result_count, prediction_count, NOW())
+    INSERT INTO user_points (user_id, league_id, total_points, exact_predictions, margin_predictions, result_predictions, prediction_predictions, knockout_points, last_calculated_at)
+    VALUES (p_user_id, p_league_id, total_points, exact_count, margin_count, result_count, prediction_count, knockout_points_val, NOW())
     ON CONFLICT (user_id, league_id)
-    DO UPDATE SET 
+    DO UPDATE SET
         total_points = EXCLUDED.total_points,
         exact_predictions = EXCLUDED.exact_predictions,
         margin_predictions = EXCLUDED.margin_predictions,
         result_predictions = EXCLUDED.result_predictions,
         prediction_predictions = EXCLUDED.prediction_predictions,
+        knockout_points = EXCLUDED.knockout_points,
         last_calculated_at = EXCLUDED.last_calculated_at;
-    
+
     RETURN total_points;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Row Level Security (RLS)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -226,12 +309,23 @@ ALTER TABLE group_predictions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE knockout_predictions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prediction_predictions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_points ENABLE ROW LEVEL SECURITY;
+ALTER TABLE knockout_standing_snapshot ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 
--- Users can view and update their own profile
-CREATE POLICY "Users can view own profile" ON profiles
-    FOR SELECT USING (auth.uid() = id);
+-- Profiles only hold username/avatar (no sensitive data), so any league
+-- member can see any other member's profile - needed for leaderboards and
+-- member lists to show names at all.
+CREATE POLICY "Profiles viewable by self or leaguemates" ON profiles
+    FOR SELECT USING (
+        auth.uid() = id OR
+        id IN (
+            SELECT user_id FROM league_members
+            WHERE league_id IN (
+                SELECT league_id FROM league_members WHERE user_id = auth.uid()
+            )
+        )
+    );
 
 CREATE POLICY "Users can update own profile" ON profiles
     FOR UPDATE USING (auth.uid() = id);
@@ -243,14 +337,27 @@ CREATE POLICY "Anyone can view leagues" ON leagues
 CREATE POLICY "Anyone can join leagues" ON league_members
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+-- A policy on league_members that subqueries league_members itself causes
+-- "infinite recursion detected in policy" - route the membership check
+-- through a SECURITY DEFINER function instead, which bypasses RLS for just
+-- that internal lookup.
+CREATE OR REPLACE FUNCTION is_league_member(p_league_id UUID, p_user_id UUID)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM league_members
+    WHERE league_id = p_league_id AND user_id = p_user_id
+  );
+$$;
+
 -- League members can view league members
 CREATE POLICY "League members can view members" ON league_members
     FOR SELECT USING (
-        user_id = auth.uid() OR 
-        user_id IN (
-            SELECT user_id FROM league_members 
-            WHERE league_id = league_members.league_id AND user_id = auth.uid()
-        )
+        user_id = auth.uid() OR
+        is_league_member(league_id, auth.uid())
     );
 
 -- Users can manage their own predictions
@@ -260,13 +367,21 @@ CREATE POLICY "Users can manage own predictions" ON group_predictions
 CREATE POLICY "Users can manage own knockout predictions" ON knockout_predictions
     FOR ALL USING (auth.uid() = user_id);
 
--- Users can view points for leagues they're in
+-- Users can view points for leagues they're in (not just their own row -
+-- needed so the leaderboard can show everyone, not just yourself)
 CREATE POLICY "Users can view own league points" ON user_points
     FOR SELECT USING (
-        user_id = auth.uid() OR 
-        user_id IN (
-            SELECT user_id FROM league_members 
-            WHERE league_id = user_points.league_id AND user_id = auth.uid()
+        user_id = auth.uid() OR
+        league_id IN (
+            SELECT league_id FROM league_members WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can view own league snapshot" ON knockout_standing_snapshot
+    FOR SELECT USING (
+        user_id = auth.uid() OR
+        league_id IN (
+            SELECT league_id FROM league_members WHERE user_id = auth.uid()
         )
     );
 

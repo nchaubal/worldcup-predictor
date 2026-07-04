@@ -55,17 +55,18 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
   limit = 10,
   showOnlyLive = false
 }) => {
-  const { matches, loading, error, fetchLiveMatches, fetchTodayMatches } = useFootballData();
+  const { matches, loading, error, fetchLiveMatches, fetchUpcomingMatches } = useFootballData();
   const { getMatchDetails } = useOpenFootball();
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
+  const [showAll, setShowAll] = React.useState(false);
 
   React.useEffect(() => {
-    const load = () => (showOnlyLive ? fetchLiveMatches() : fetchTodayMatches());
+    const load = () => (showOnlyLive ? fetchLiveMatches() : fetchUpcomingMatches());
     load();
     // Refresh periodically so live scores stay current
     const interval = setInterval(load, 60000);
     return () => clearInterval(interval);
-  }, [showOnlyLive, fetchLiveMatches, fetchTodayMatches]);
+  }, [showOnlyLive, fetchLiveMatches, fetchUpcomingMatches]);
 
   if (loading) {
     return (
@@ -102,14 +103,14 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
 
   const displayMatches = showOnlyLive
     ? matches.filter(m => m.isLive)
-    : matches.slice(0, limit);
+    : showAll ? matches : matches.slice(0, limit);
 
   if (displayMatches.length === 0) {
     return (
       <Card className={className}>
         <CardHeader>
           <CardTitle className="text-lg">
-            {showOnlyLive ? 'Live Matches' : "Recent World Cup Matches"}
+            {showOnlyLive ? 'Live Matches' : "Upcoming World Cup Matches"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -117,7 +118,7 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
             <p>
               {showOnlyLive
                 ? 'No live matches currently'
-                : 'No recent World Cup matches found'
+                : 'No upcoming World Cup matches found'
               }
             </p>
           </div>
@@ -163,10 +164,10 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
     <Card className={className}>
       <CardHeader>
         <CardTitle className="text-lg flex items-center justify-between">
-          <span>{showOnlyLive ? 'Live Matches' : "Recent World Cup Matches"}</span>
+          <span>{showOnlyLive ? 'Live Matches' : "Upcoming World Cup Matches"}</span>
           {!showOnlyLive && (
             <button
-              onClick={() => fetchTodayMatches()}
+              onClick={() => fetchUpcomingMatches()}
               className="text-sm text-muted-foreground transition-colors hover:text-primary"
             >
               Refresh
@@ -250,13 +251,13 @@ export const FootballDataScores: React.FC<FootballDataScoresProps> = ({
           })}
         </div>
 
-        {!showOnlyLive && matches.length > limit && (
+        {!showOnlyLive && !showAll && matches.length > limit && (
           <div className="mt-4 text-center">
             <button
-              onClick={() => fetchTodayMatches()}
+              onClick={() => setShowAll(true)}
               className="text-sm text-primary hover:underline"
             >
-              View all matches
+              See more
             </button>
           </div>
         )}

@@ -73,6 +73,7 @@ export interface UserPoints {
   margin_predictions: number;
   result_predictions: number;
   prediction_predictions: number;
+  knockout_points: number;
   last_calculated_at: string;
   profiles: {
     id: string;
@@ -386,13 +387,26 @@ export class SupabaseService {
   static async calculateUserPoints(userId: string, leagueId: string): Promise<number> {
     this.checkSupabase();
     const { data, error } = await supabase!
-      .rpc('calculate_user_points', { 
-        p_user_id: userId, 
-        p_league_id: leagueId 
+      .rpc('calculate_user_points', {
+        p_user_id: userId,
+        p_league_id: leagueId
       });
-    
+
     if (error) throw error;
     return data || 0;
+  }
+
+  // Locks in every member's "punish the leader" scoring multiplier for the
+  // rest of the tournament, based on standings at the moment this is called.
+  // Intended to be triggered once by the league creator when the knockout
+  // stage begins - see round-weighted-scoring.sql for the full rule.
+  static async snapshotKnockoutStandings(leagueId: string): Promise<void> {
+    this.checkSupabase();
+    const { error } = await supabase!.rpc('snapshot_knockout_standings', {
+      p_league_id: leagueId,
+    });
+
+    if (error) throw error;
   }
 
   // Auth helpers

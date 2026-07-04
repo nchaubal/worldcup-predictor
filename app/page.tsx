@@ -97,14 +97,17 @@ export default function HomePage() {
             </Badge>
 
             <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-8">
-              <Image
-                src="/2026_FIFA_World_Cup_emblem.svg.webp"
-                alt="FIFA World Cup 2026"
-                width={960}
-                height={1482}
-                priority
-                className="h-24 w-auto sm:h-40 rounded-xl shrink-0"
-              />
+              <div className="h-24 w-24 sm:h-40 sm:w-40 shrink-0 rounded-2xl overflow-hidden ring-1 ring-primary/20 shadow-lg shadow-black/40">
+                <Image
+                  src="/fifa-world-cup-2026-fifa.gif"
+                  alt="FIFA World Cup 2026"
+                  width={498}
+                  height={498}
+                  unoptimized
+                  priority
+                  className="h-full w-full object-cover"
+                />
+              </div>
               <h1 className="text-center sm:text-left text-4xl font-black tracking-tight sm:text-6xl leading-none">
                 Boom FIFA World Cup<br />
                 <span className="text-primary">2026™</span>{" "}
@@ -158,8 +161,40 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* ── Live Scores ───────────────────────────────────── */}
-        <FootballDataScores />
+        {/* ── Live Now ───────────────────────────────────────── */}
+        {footballMatches.filter(m => m.isLive).length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Radio className="h-4 w-4 text-red-400 animate-pulse" />
+              <span className="text-sm font-semibold text-red-400 uppercase tracking-wide">Live Now</span>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {footballMatches.filter(m => m.isLive).map((match) => {
+                return (
+                  <Card key={match.id} className="border-red-500/30 bg-red-500/5 ring-1 ring-red-500/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-red-500/10 hover:ring-red-500/40 sm:only:col-span-2">
+                    <CardContent className="py-4 flex items-center gap-3">
+                      <div className="flex-1 flex items-center gap-2">
+                        <span className="text-lg font-bold text-muted-foreground">{match.homeTeam.tla}</span>
+                        <span className="font-semibold text-sm">{match.homeTeam.name}</span>
+                      </div>
+                      <div className="text-center shrink-0">
+                        <div className="text-xs text-red-400 font-bold animate-pulse">LIVE</div>
+                        <div className="text-lg font-bold">{match.formattedScore}</div>
+                      </div>
+                      <div className="flex-1 flex items-center justify-end gap-2">
+                        <span className="font-semibold text-sm">{match.awayTeam.name}</span>
+                        <span className="text-lg font-bold text-muted-foreground">{match.awayTeam.tla}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Upcoming Matches ───────────────────────────────── */}
+        <FootballDataScores limit={3} />
 
         {/* ── R32 Results ────────────────────────────────────── */}
         <div>
@@ -167,37 +202,6 @@ export default function HomePage() {
             <h2 className="text-xl font-bold">Round of 32</h2>
             <Link href="/bracket" className="text-sm text-primary hover:underline">View full bracket →</Link>
           </div>
-
-          {footballMatches.filter(m => m.isLive).length > 0 && (
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Radio className="h-4 w-4 text-red-400 animate-pulse" />
-                <span className="text-sm font-semibold text-red-400 uppercase tracking-wide">Live Now</span>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {footballMatches.filter(m => m.isLive).map((match) => {
-                  return (
-                    <Card key={match.id} className="border-red-500/30 bg-red-500/5 ring-1 ring-red-500/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-red-500/10 hover:ring-red-500/40 sm:only:col-span-2">
-                      <CardContent className="py-4 flex items-center gap-3">
-                        <div className="flex-1 flex items-center gap-2">
-                          <span className="text-lg font-bold text-muted-foreground">{match.homeTeam.tla}</span>
-                          <span className="font-semibold text-sm">{match.homeTeam.name}</span>
-                        </div>
-                        <div className="text-center shrink-0">
-                          <div className="text-xs text-red-400 font-bold animate-pulse">LIVE</div>
-                          <div className="text-lg font-bold">{match.formattedScore}</div>
-                        </div>
-                        <div className="flex-1 flex items-center justify-end gap-2">
-                          <span className="font-semibold text-sm">{match.awayTeam.name}</span>
-                          <span className="text-lg font-bold text-muted-foreground">{match.awayTeam.tla}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {windowedR32.map((m) => {
@@ -220,18 +224,17 @@ export default function HomePage() {
               const isLive = m.status === "live";
               const homeWon = m.winner === (m.homeTeamId || homeTeam.id);
               const awayWon = m.winner === (m.awayTeamId || awayTeam.id);
-              
               // Get match details from OpenFootball
               const matchDetails = getMatchDetails(homeTeam.name, awayTeam.name);
               const hasGoals = matchDetails && matchDetails.goals.length > 0;
               const isExpanded = expandedMatch === m.id;
               const homeGoals = matchDetails?.goals.filter(g => g.team === 'home') || [];
               const awayGoals = matchDetails?.goals.filter(g => g.team === 'away') || [];
-              
+
               return (
-                <Card 
-                  key={m.id} 
-                  className={`border-border/50 transition-all duration-200 ${isCompleted ? "opacity-80 hover:opacity-100" : "hover:border-primary/30"} ${hasGoals ? "cursor-pointer" : ""}`}
+                <Card
+                  key={m.id}
+                  className={`border-border/50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${isCompleted ? "opacity-80 hover:opacity-100" : "hover:border-primary/30"} ${hasGoals ? "cursor-pointer" : ""}`}
                   onClick={() => hasGoals && setExpandedMatch(isExpanded ? null : m.id)}
                 >
                   <CardContent className="py-3 px-4">
