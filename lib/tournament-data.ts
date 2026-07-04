@@ -24,6 +24,9 @@ export type Prediction = {
   homeScore: number;
   awayScore: number;
   predictedWinner: string | null;
+  knockoutWinner?: string | null; // DEPRECATED
+  etResult?: string | null; // 'home', 'away', or 'draw' - ET result if 90min is draw
+  penaltyWinner?: string | null; // 'home' or 'away' - penalty winner if ET is draw
 };
 
 export type UserPredictions = {

@@ -1,34 +1,92 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
-import { Prediction, UserPredictions, League, GROUP_MATCHES, KNOCKOUT_MATCHES, Match, Team } from "@/lib/tournament-data";
-import { calculatePoints, calculatePointsWithBreakdown } from "@/lib/ai-predictor";
-import { SupabaseService, Profile, GroupPrediction, KnockoutPrediction, UserPoints, PredictionPrediction } from "@/lib/supabase";
-import { MOCK_USERS, MOCK_LEAGUE, generateMockPredictions } from "@/lib/mock-data";
+import { Prediction, UserPredictions, GROUP_MATCHES, KNOCKOUT_MATCHES } from "@/lib/tournament-data";
+import { SupabaseService, Profile } from "@/lib/supabase";
+import { MOCK_USERS } from "@/lib/mock-data";
 import { supabase } from "@/lib/supabase";
+import { 
+  calculateTotalPoints, 
+  type UserPrediction as PointsUserPrediction,
+  type MatchResult as PointsMatchResult 
+} from "@/lib/points-calculator";
+
+// Extended result type that includes ET and penalty data
+type ExtendedMatchResult = {
+  matchId: string;
+  homeScore: number;
+  awayScore: number;
+  etResult?: string | null;
+  penaltyWinner?: string | null;
+};
+
+// Calculate points using the new weighted system
+const calculatePoints = (predictions: Prediction[], results: ExtendedMatchResult[]) => {
+  const predictionInputs: PointsUserPrediction[] = predictions.map(p => ({
+    matchId: p.matchId,
+    homeScore: p.homeScore,
+    awayScore: p.awayScore,
+    etResult: p.etResult,
+    penaltyWinner: p.penaltyWinner,
+  }));
+  
+  const resultInputs: PointsMatchResult[] = results.map(r => ({
+    matchId: r.matchId,
+    homeScore: r.homeScore,
+    awayScore: r.awayScore,
+    etResult: r.etResult || null,
+    penaltyWinner: r.penaltyWinner || null,
+  }));
+  
+  const totals = calculateTotalPoints(predictionInputs, resultInputs);
+  return totals.total;
+};
+
+const calculatePointsWithBreakdown = (predictions: Prediction[], results: ExtendedMatchResult[]) => {
+  const predictionInputs: PointsUserPrediction[] = predictions.map(p => ({
+    matchId: p.matchId,
+    homeScore: p.homeScore,
+    awayScore: p.awayScore,
+    etResult: p.etResult,
+    penaltyWinner: p.penaltyWinner,
+  }));
+  
+  const resultInputs: PointsMatchResult[] = results.map(r => ({
+    matchId: r.matchId,
+    homeScore: r.homeScore,
+    awayScore: r.awayScore,
+    etResult: r.etResult || null,
+    penaltyWinner: r.penaltyWinner || null,
+  }));
+  
+  const totals = calculateTotalPoints(predictionInputs, resultInputs);
+  return { 
+    exact: totals.exactScores, 
+    margin: totals.correctMargins, 
+    result: totals.correctResults,
+    etResults: totals.correctEtResults,
+    penaltyWinners: totals.correctPenaltyWinners,
+    winners: totals.correctWinners,
+  };
+};
 
 type TournamentContextType = {
   currentUser: UserPredictions | null;
   predictions: Prediction[];
   knockoutPredictions: { [matchId: string]: string };
-  predictionPredictions: PredictionPrediction[];
-  leagues: League[];
+  knockoutScores: { [matchId: string]: { home: number; away: number } };
   actualResults: { matchId: string; homeScore: number; awayScore: number }[];
   isLoading: boolean;
   isAuthenticated: boolean;
-  setPrediction: (matchId: string, homeScore: number, awayScore: number) => void;
+  isAdmin: boolean;
+  accessDenied: boolean;
+  setPrediction: (matchId: string, homeScore: number, awayScore: number, etResult?: string | null, penaltyWinner?: string | null) => void;
   setKnockoutPrediction: (matchId: string, winnerId: string, homeScore?: number, awayScore?: number) => void;
-  knockoutScores: { [matchId: string]: { home: number; away: number } };
-  setPredictionPrediction: (predictedUserId: string, matchId: string, homeScore: number, awayScore: number) => void;
-  deletePredictionPrediction: (predictedUserId: string, matchId: string) => void;
-  createLeague: (name: string) => Promise<League>;
-  joinLeague: (code: string) => Promise<League | null>;
   updateUserName: (name: string) => void;
-  getLeaderboard: (leagueId?: string) => Promise<UserPredictions[]>;
+  getLeaderboard: () => Promise<UserPredictions[]>;
   getTotalPoints: () => number;
-  getPointsBreakdown: () => { total: number; exact: number; margin: number; result: number; prediction: number };
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username: string) => Promise<void>;
+  getPointsBreakdown: () => { total: number; exact: number; margin: number; result: number };
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -39,11 +97,22 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [knockoutPredictions, setKnockoutPredictions] = useState<{ [matchId: string]: string }>({});
   const [knockoutScores, setKnockoutScores] = useState<{ [matchId: string]: { home: number; away: number } }>({});
-  const [predictionPredictions, setPredictionPredictions] = useState<PredictionPrediction[]>([]);
-  const [leagues, setLeagues] = useState<League[]>([]);
   const [actualResults] = useState<{ matchId: string; homeScore: number; awayScore: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
+
+  // Check if email is in allowlist
+  const checkEmailAllowed = async (email: string): Promise<boolean> => {
+    try {
+      const allowed = await SupabaseService.isEmailAllowed(email);
+      return allowed;
+    } catch (error) {
+      console.error('Error checking email allowlist:', error);
+      return false;
+    }
+  };
 
   // Define loadUserData before useEffect that uses it
   const loadUserData = async (userId: string, username?: string) => {
@@ -59,22 +128,14 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
           userName: profile.username,
           avatar: profile.avatar,
           predictions: [],
-          totalPoints: 0,
+          totalPoints: profile.total_points || 0,
         });
+        
+        // Check admin status
+        setIsAdmin(profile.is_admin === true);
       } else {
         console.warn('[loadUserData] No profile found and no username provided to create one');
       }
-
-      // Load user's leagues
-      const userLeagues = await SupabaseService.getLeagues(userId);
-      const convertedLeagues: League[] = userLeagues.map(league => ({
-        id: league.id,
-        name: league.name,
-        code: league.code,
-        members: [], // Will be loaded separately
-        createdBy: league.creator_id,
-      }));
-      setLeagues(convertedLeagues);
 
       // Load predictions
       const groupPreds = await SupabaseService.getGroupPredictions(userId);
@@ -83,6 +144,8 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
         homeScore: pred.home_score,
         awayScore: pred.away_score,
         predictedWinner: pred.predicted_winner,
+        etResult: pred.et_result || null,
+        penaltyWinner: pred.penalty_winner || null,
       }));
       setPredictions(formattedPredictions);
 
@@ -98,10 +161,6 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       setKnockoutPredictions(formattedKnockout);
       setKnockoutScores(formattedScores);
 
-      // Load prediction predictions
-      const predPreds = await SupabaseService.getPredictionPredictions(userId);
-      setPredictionPredictions(predPreds);
-
     } catch (error) {
       console.error('Error loading user data:', error);
     }
@@ -113,10 +172,9 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       try {
         if (!supabase) {
           // Fallback to mock data if Supabase is not initialized
-          setLeagues([MOCK_LEAGUE]);
           setCurrentUser({
             userId: "user_1",
-            userName: "You",
+            userName: "Guest",
             avatar: "⚽",
             predictions: [],
             totalPoints: 0,
@@ -128,30 +186,21 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
+          // Check if email is allowed
+          const isAllowed = await checkEmailAllowed(user.email || '');
+          if (!isAllowed) {
+            setAccessDenied(true);
+            await supabase.auth.signOut();
+            setIsLoading(false);
+            return;
+          }
+          
           setIsAuthenticated(true);
-          loadUserData(user.id);
-        } else {
-          // Use mock data as fallback
-          setLeagues([MOCK_LEAGUE]);
-          setCurrentUser({
-            userId: "user_1",
-            userName: "You",
-            avatar: "⚽",
-            predictions: [],
-            totalPoints: 0,
-          });
+          setAccessDenied(false);
+          loadUserData(user.id, user.email?.split('@')[0]);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        // Fallback to mock data
-        setLeagues([MOCK_LEAGUE]);
-        setCurrentUser({
-          userId: "user_1",
-          userName: "You",
-          avatar: "⚽",
-          predictions: [],
-          totalPoints: 0,
-        });
       } finally {
         setIsLoading(false);
       }
@@ -162,23 +211,35 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
     // Listen for auth changes
     const { data: { subscription } } = supabase ? supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
+        // Check if email is allowed
+        const isAllowed = await checkEmailAllowed(session.user.email || '');
+        if (!isAllowed) {
+          setAccessDenied(true);
+          await supabase!.auth.signOut();
+          return;
+        }
+        
         setIsAuthenticated(true);
-        const username = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'User';
+        setAccessDenied(false);
+        const username = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User';
         loadUserData(session.user.id, username);
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         setCurrentUser(null);
         setPredictions([]);
         setKnockoutPredictions({});
-        setLeagues([]);
       }
     }) : { data: { subscription: null } };
 
     return () => subscription?.unsubscribe();
   }, []);
 
-  const setPrediction = useCallback(async (matchId: string, homeScore: number, awayScore: number) => {
-    if (!currentUser || !isAuthenticated) return;
+  const setPrediction = useCallback(async (matchId: string, homeScore: number, awayScore: number, etResult?: string | null, penaltyWinner?: string | null) => {
+    console.log('[setPrediction] called', { matchId, homeScore, awayScore, etResult, penaltyWinner, currentUser: currentUser?.userId, isAuthenticated });
+    if (!currentUser || !isAuthenticated) {
+      console.warn('[setPrediction] bailing out: currentUser=', currentUser, 'isAuthenticated=', isAuthenticated);
+      return;
+    }
 
     try {
       const match = [...GROUP_MATCHES, ...KNOCKOUT_MATCHES].find((m) => m.id === matchId);
@@ -192,7 +253,14 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
       // Update local state
       setPredictions((prev) => {
         const existing = prev.findIndex((p) => p.matchId === matchId);
-        const newPred: Prediction = { matchId, homeScore, awayScore, predictedWinner: predictedWinner || null };
+        const newPred: Prediction = { 
+          matchId, 
+          homeScore, 
+          awayScore, 
+          predictedWinner: predictedWinner || null,
+          etResult: etResult || null,
+          penaltyWinner: penaltyWinner || null
+        };
         if (existing >= 0) {
           const updated = [...prev];
           updated[existing] = newPred;
@@ -207,7 +275,9 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
         matchId,
         homeScore,
         awayScore,
-        predictedWinner || 'draw'
+        predictedWinner || 'draw',
+        etResult,
+        penaltyWinner
       );
 
     } catch (error) {
@@ -233,126 +303,6 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
     }
   }, [currentUser, isAuthenticated]);
 
-  const setPredictionPrediction = useCallback(async (predictedUserId: string, matchId: string, homeScore: number, awayScore: number) => {
-    if (!currentUser || !isAuthenticated || currentUser.userId === predictedUserId) return;
-
-    try {
-      // Save to Supabase
-      const newPredPred = await SupabaseService.upsertPredictionPrediction(
-        currentUser.userId,
-        predictedUserId,
-        matchId,
-        homeScore,
-        awayScore
-      );
-
-      // Update local state
-      setPredictionPredictions(prev => {
-        const existing = prev.findIndex(p => 
-          p.predictor_user_id === currentUser.userId && 
-          p.predicted_user_id === predictedUserId && 
-          p.match_id === matchId
-        );
-        if (existing >= 0) {
-          const updated = [...prev];
-          updated[existing] = newPredPred;
-          return updated;
-        }
-        return [...prev, newPredPred];
-      });
-
-    } catch (error) {
-      console.error('Error saving prediction prediction:', error);
-    }
-  }, [currentUser, isAuthenticated]);
-
-  const deletePredictionPrediction = useCallback(async (predictedUserId: string, matchId: string) => {
-    if (!currentUser || !isAuthenticated) return;
-
-    try {
-      // Delete from Supabase
-      await SupabaseService.deletePredictionPrediction(currentUser.userId, predictedUserId, matchId);
-
-      // Update local state
-      setPredictionPredictions(prev => 
-        prev.filter(p => 
-          !(p.predictor_user_id === currentUser.userId && 
-            p.predicted_user_id === predictedUserId && 
-            p.match_id === matchId)
-        )
-      );
-
-    } catch (error) {
-      console.error('Error deleting prediction prediction:', error);
-    }
-  }, [currentUser, isAuthenticated]);
-
-  const createLeague = useCallback(async (name: string): Promise<League> => {
-    console.log('[Context.createLeague] Called with', { 
-      name, 
-      currentUser: currentUser?.userId, 
-      isAuthenticated 
-    });
-    
-    if (!currentUser || !isAuthenticated) {
-      console.log('[Context.createLeague] Not authenticated, returning mock league');
-      return MOCK_LEAGUE;
-    }
-
-    try {
-      console.log('[Context.createLeague] Calling SupabaseService.createLeague');
-      const newLeague = await SupabaseService.createLeague(name, currentUser.userId);
-      console.log('[Context.createLeague] League created', newLeague);
-      
-      const convertedLeague: League = {
-        id: newLeague.id,
-        name: newLeague.name,
-        code: newLeague.code,
-        members: [], // Will be loaded separately
-        createdBy: newLeague.creator_id,
-      };
-      setLeagues(prev => [convertedLeague, ...prev]);
-      return convertedLeague;
-    } catch (error: unknown) {
-      const err = error as { message?: string; code?: string; details?: string; hint?: string; stack?: string };
-      console.error('[Context.createLeague] Error:', {
-        message: err?.message,
-        code: err?.code,
-        details: err?.details,
-        hint: err?.hint,
-        stack: err?.stack
-      });
-      throw error;
-    }
-  }, [currentUser, isAuthenticated]);
-
-  const joinLeague = useCallback(async (code: string): Promise<League | null> => {
-    if (!currentUser || !isAuthenticated) {
-      // Return mock league for demo
-      return code.toUpperCase() === MOCK_LEAGUE.code ? MOCK_LEAGUE : null;
-    }
-
-    try {
-      const league = await SupabaseService.getLeagueByCode(code);
-      if (league) {
-        await SupabaseService.joinLeague(league.id, currentUser.userId);
-        const convertedLeague: League = {
-          id: league.id,
-          name: league.name,
-          code: league.code,
-          members: [], // Will be loaded separately
-          createdBy: league.creator_id,
-        };
-        setLeagues(prev => [...prev.filter(l => l.id !== league.id), convertedLeague]);
-        return convertedLeague;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error joining league:', error);
-      return null;
-    }
-  }, [currentUser, isAuthenticated]);
-
   const updateUserName = useCallback(async (name: string) => {
     if (!currentUser || !isAuthenticated) return;
 
@@ -365,100 +315,58 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
   }, [currentUser, isAuthenticated]);
 
   const getTotalPoints = useCallback(() => {
-    return actualResults.reduce((total, result) => {
-      const pred = predictions.find((p) => p.matchId === result.matchId);
-      if (!pred) return total;
-      return total + calculatePoints(pred, result);
-    }, 0);
+    return calculatePoints(predictions, actualResults);
   }, [predictions, actualResults]);
 
   const getPointsBreakdown = useCallback(() => {
-    if (!currentUser) return { total: 0, exact: 0, margin: 0, result: 0, prediction: 0 };
+    if (!currentUser) return { total: 0, exact: 0, margin: 0, result: 0 };
     
-    // Calculate breakdown based on predictions and actual results
-    let exact = 0, margin = 0, result = 0, prediction = 0;
-    
-    predictions.forEach(pred => {
-      const actual = actualResults.find(r => r.matchId === pred.matchId);
-      if (actual) {
-        const breakdown = calculatePointsWithBreakdown(pred, actual);
-        if (breakdown.breakdown.exactScore) exact++;
-        else if (breakdown.breakdown.correctMargin) margin++;
-        else if (breakdown.breakdown.correctResult) result++;
-      }
-    });
-    
-    // Count prediction predictions
-    prediction = predictionPredictions.length;
+    const breakdown = calculatePointsWithBreakdown(predictions, actualResults);
     
     return {
       total: getTotalPoints(),
-      exact,
-      margin,
-      result,
-      prediction
+      exact: breakdown.exact,
+      margin: breakdown.margin,
+      result: breakdown.result
     };
-  }, [currentUser, predictions, actualResults, predictionPredictions, getTotalPoints]);
+  }, [currentUser, predictions, actualResults, getTotalPoints]);
 
-  const getLeaderboard = useCallback(async (leagueId?: string): Promise<UserPredictions[]> => {
-    if (!isAuthenticated || !currentUser) {
-      // Return mock data for demo
-      return MOCK_USERS.sort((a, b) => b.totalPoints - a.totalPoints);
-    }
-
+  const getLeaderboard = useCallback(async (): Promise<UserPredictions[]> => {
     try {
-      // Skip "global" or invalid league IDs - return current user only for now
-      // UUID format check: 8-4-4-4-12 hex characters
-      const isValidUUID = leagueId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(leagueId);
+      // Get all profiles for global leaderboard (already ordered by total_points)
+      const profiles = await SupabaseService.getAllProfiles();
       
-      if (!isValidUUID) {
-        // Return just the current user for global/invalid league
-        return [{
-          userId: currentUser.userId,
-          userName: currentUser.userName,
-          avatar: currentUser.avatar,
-          predictions: [],
-          totalPoints: getTotalPoints(),
-        }];
-      }
-
-      // Nothing else recalculates user_points when match_results change, so
-      // refresh every member's total before reading the leaderboard.
-      const members = await SupabaseService.getLeagueMembers(leagueId);
-      await Promise.all(
-        members.map((m) => SupabaseService.calculateUserPoints(m.id, leagueId))
-      );
-
-      const userPoints = await SupabaseService.getUserPoints(leagueId);
-      
-      return userPoints.map(up => ({
-        userId: up.user_id,
-        userName: up.profiles.username,
-        avatar: up.profiles.avatar,
+      // Map profiles to UserPredictions format
+      const leaderboard: UserPredictions[] = profiles.map((profile: Profile) => ({
+        userId: profile.id,
+        userName: profile.username || 'Anonymous',
+        avatar: profile.avatar || '⚽',
         predictions: [],
-        totalPoints: up.total_points,
-      })).sort((a, b) => b.totalPoints - a.totalPoints);
+        totalPoints: profile.total_points || 0,
+      }));
+      
+      return leaderboard;
 
     } catch (error) {
       console.error('Error getting leaderboard:', error);
       return [];
     }
-  }, [isAuthenticated, currentUser, getTotalPoints]);
-
-  const signIn = useCallback(async (email: string, password: string) => {
-    try {
-      await SupabaseService.signIn(email, password);
-    } catch (error) {
-      console.error('Sign in error:', error);
-      throw error;
-    }
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, username: string) => {
-    try {
-      await SupabaseService.signUp(email, password, username);
-    } catch (error) {
-      console.error('Sign up error:', error);
+  const signInWithGoogle = useCallback(async () => {
+    if (!supabase) {
+      throw new Error('Supabase not initialized');
+    }
+    
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
+      },
+    });
+    
+    if (error) {
+      console.error('Google sign in error:', error);
       throw error;
     }
   }, []);
@@ -479,23 +387,18 @@ export function TournamentProviderSupabase({ children }: { children: ReactNode }
         predictions,
         knockoutPredictions,
         knockoutScores,
-        predictionPredictions,
-        leagues,
         actualResults,
         isLoading,
         isAuthenticated,
+        isAdmin,
+        accessDenied,
         setPrediction,
         setKnockoutPrediction,
-        setPredictionPrediction,
-        deletePredictionPrediction,
-        createLeague,
-        joinLeague,
         updateUserName,
         getLeaderboard,
         getTotalPoints,
         getPointsBreakdown,
-        signIn,
-        signUp,
+        signInWithGoogle,
         signOut,
       }}
     >

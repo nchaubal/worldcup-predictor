@@ -3,6 +3,7 @@ import { Josefin_Sans } from "next/font/google";
 import "./globals.css";
 import { TournamentProviderSupabase } from "@/context/TournamentContextSupabase";
 import Navbar from "@/components/Navbar";
+import { BottomNav } from "@/components/BottomNav";
 
 const josefinSans = Josefin_Sans({
   variable: "--font-sans",
@@ -31,8 +32,15 @@ export default function RootLayout({
     <html lang="en" className={`${josefinSans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <TournamentProviderSupabase>
-          <Navbar />
-          <main className="flex-1">{children}</main>
+          {/* Desktop navbar - hidden on mobile */}
+          <div className="hidden md:block">
+            <Navbar />
+          </div>
+          <main className="flex-1 pb-16 md:pb-0">{children}</main>
+          {/* Mobile bottom nav - hidden on desktop */}
+          <div className="md:hidden">
+            <BottomNav />
+          </div>
         </TournamentProviderSupabase>
       </body>
     </html>
