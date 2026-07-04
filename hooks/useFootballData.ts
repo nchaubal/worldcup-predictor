@@ -71,24 +71,17 @@ export const useFootballData = () => {
       setLoading(true);
       setError(null);
       
-      // Try to get today's matches first
-      const todayResponse = await footballDataApi.getTodayWorldCupMatches();
+      // Get matches from the last 3 days plus today to show recent results
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const dateFrom = threeDaysAgo.toISOString().split('T')[0];
+      const dateTo = new Date().toISOString().split('T')[0];
       
-      // If no matches today, get recent matches (last 5 days)
-      let matches = todayResponse.matches;
-      
-      if (matches.length === 0) {
-        const fiveDaysAgo = new Date();
-        fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-        const dateFrom = fiveDaysAgo.toISOString().split('T')[0];
-        const dateTo = new Date().toISOString().split('T')[0];
-        
-        const recentResponse = await footballDataApi.getWorldCupMatches({ 
-          dateFrom, 
-          dateTo 
-        });
-        matches = recentResponse.matches;
-      }
+      const recentResponse = await footballDataApi.getWorldCupMatches({ 
+        dateFrom, 
+        dateTo 
+      });
+      const matches = recentResponse.matches;
       
       const matchesWithDetails = matches.map(match => ({
         ...match,
