@@ -32,6 +32,17 @@ export type UserPredictions = {
   avatar: string;
   predictions: Prediction[];
   totalPoints: number;
+  // exact/margin/result/prediction are raw counts (not point-weighted) - see
+  // POINT_WEIGHTS in app/leagues/page.tsx for how those convert into points.
+  // knockout is already fully-weighted (round weight x standing multiplier
+  // applied server-side), since it has no fixed per-pick weight to multiply.
+  pointsBreakdown?: {
+    exact: number;
+    margin: number;
+    result: number;
+    prediction: number;
+    knockout: number;
+  };
 };
 
 export type League = {

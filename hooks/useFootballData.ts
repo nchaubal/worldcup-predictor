@@ -119,6 +119,38 @@ export const useFootballData = () => {
     }
   }, []);
 
+  const fetchUpcomingMatches = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const today = new Date().toISOString().split('T')[0];
+      const tenDaysOut = new Date();
+      tenDaysOut.setDate(tenDaysOut.getDate() + 10);
+      const dateTo = tenDaysOut.toISOString().split('T')[0];
+
+      const response = await footballDataApi.getWorldCupMatches({ dateFrom: today, dateTo });
+      const matchesWithDetails = response.matches
+        .map(match => ({
+          ...match,
+          formattedTime: footballDataApi.getMatchTime(match),
+          formattedScore: footballDataApi.getMatchScore(match),
+          isLive: footballDataApi.isMatchLive(match),
+          isFinished: footballDataApi.isMatchFinished(match),
+        }))
+        // Only genuinely upcoming fixtures - excludes today's matches that
+        // already finished or are currently live.
+        .filter(match => !match.isFinished && !match.isLive);
+
+      setMatches(matchesWithDetails);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch upcoming matches');
+      console.error('Error fetching upcoming matches:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const fetchMatch = useCallback(async (matchId: number) => {
     try {
       setLoading(true);
@@ -154,6 +186,7 @@ export const useFootballData = () => {
     fetchWorldCupMatches,
     fetchLiveMatches,
     fetchTodayMatches,
+    fetchUpcomingMatches,
     fetchMatch,
     refetch: fetchTodayMatches,
   };

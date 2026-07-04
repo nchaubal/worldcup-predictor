@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,12 @@ import { UserPredictions, GROUP_MATCHES, TEAMS } from "@/lib/tournament-data";
 import { SupabaseService, GroupPrediction } from "@/lib/supabase";
 import { Users, Plus, LogIn, Trophy, Medal, Copy, CheckCheck, Target, ChevronRight, X } from "lucide-react";
 
+// Must match the point values in calculate_user_points() (supabase/schema.sql)
+const POINT_WEIGHTS = { exact: 5, margin: 2, result: 1, prediction: 3 } as const;
+const DIVISION_1_SIZE = 6;
+
 export default function LeaguesPage() {
-  const { leagues, currentUser, createLeague, joinLeague, getLeaderboard, isLoading, isAuthenticated, setPredictionPrediction, predictionPredictions } = useTournamentSupabase();
+  const { leagues, currentUser, createLeague, joinLeague, getLeaderboard, snapshotKnockoutStandings, isLoading, isAuthenticated, setPredictionPrediction, predictionPredictions } = useTournamentSupabase();
   const [newLeagueName, setNewLeagueName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [activeLeague, setActiveLeague] = useState("global");
@@ -22,6 +26,7 @@ export default function LeaguesPage() {
   const [selectedMember, setSelectedMember] = useState<UserPredictions | null>(null);
   const [memberPredictions, setMemberPredictions] = useState<GroupPrediction[]>([]);
   const [predictionInputs, setPredictionInputs] = useState<{ [matchId: string]: { home: number; away: number } }>({});
+  const [snapshotting, setSnapshotting] = useState(false);
 
   const handleCreate = async () => {
     if (!newLeagueName.trim()) return;
@@ -59,6 +64,21 @@ export default function LeaguesPage() {
 
   const [leaderboard, setLeaderboard] = useState<UserPredictions[]>([]);
   const currentLeague = leagues.find((l) => l.id === activeLeague);
+
+  const handleSnapshotStandings = async () => {
+    if (!currentLeague) return;
+    setSnapshotting(true);
+    try {
+      await snapshotKnockoutStandings(currentLeague.id);
+      const data = await getLeaderboard(currentLeague.id);
+      setLeaderboard(data);
+      setMessage({ type: "success", text: "Knockout standing multipliers locked in for this league!" });
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to lock in multipliers. Please try again." });
+    } finally {
+      setSnapshotting(false);
+    }
+  };
 
   useEffect(() => {
     const loadLeaderboard = async () => {
@@ -310,36 +330,100 @@ export default function LeaguesPage() {
           </CardHeader>
           <CardContent>
             {activeTab === "leaderboard" ? (
-              <div className="space-y-2">
-                {leaderboard.map((user, idx) => {
-                  const isMe = currentUser?.userId === user.userId;
-                  return (
-                    <div
-                      key={user.userId}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-3 ${
-                        isMe ? "bg-primary/8 ring-1 ring-primary/25" : "hover:bg-accent/40"
-                      }`}
+              <div className="overflow-x-auto -mx-2">
+                <table className="w-full min-w-[560px] border-collapse text-sm">
+                  <thead>
+                    <tr className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <th className="px-2 py-2 text-left font-semibold w-10">#</th>
+                      <th className="px-2 py-2 text-left font-semibold">Player</th>
+                      <th className="px-2 py-2 text-right font-semibold" title="Exact score correct · 5 pts each">Exact</th>
+                      <th className="px-2 py-2 text-right font-semibold" title="Correct margin of victory · 2 pts each">Margin</th>
+                      <th className="px-2 py-2 text-right font-semibold" title="Correct result (W/D/L) · 1 pt each">Result</th>
+                      <th className="px-2 py-2 text-right font-semibold" title="Correctly predicted a leaguemate's prediction · 3 pts each">Predictions</th>
+                      <th className="px-2 py-2 text-right font-semibold" title="Correct knockout pick, round-weighted (R16 1.25x, QF 1.5x, SF 2x, Final 3x) and standing-adjusted">Knockout</th>
+                      <th className="px-2 py-2 text-right font-semibold text-foreground">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboard.map((user, idx) => {
+                      const isMe = currentUser?.userId === user.userId;
+                      const bd = user.pointsBreakdown;
+                      const cols = [
+                        { count: bd?.exact ?? 0, weight: POINT_WEIGHTS.exact },
+                        { count: bd?.margin ?? 0, weight: POINT_WEIGHTS.margin },
+                        { count: bd?.result ?? 0, weight: POINT_WEIGHTS.result },
+                        { count: bd?.prediction ?? 0, weight: POINT_WEIGHTS.prediction },
+                      ];
+                      const divisionLabel =
+                        idx === 0 ? "Division 1" : idx === DIVISION_1_SIZE ? "Division 2" : null;
+                      return (
+                        <Fragment key={user.userId}>
+                          {divisionLabel && (
+                            <tr>
+                              <td
+                                colSpan={8}
+                                className={`px-2 text-[10px] font-bold uppercase tracking-widest text-primary/70 border-b border-primary/20 ${
+                                  idx === 0 ? "pb-1.5" : "pt-4 pb-1.5"
+                                }`}
+                              >
+                                {divisionLabel}
+                              </td>
+                            </tr>
+                          )}
+                          <tr
+                            className={`border-b border-border/30 last:border-0 transition-colors ${
+                              isMe ? "bg-primary/8" : "hover:bg-accent/40"
+                            }`}
+                          >
+                            <td className="px-2 py-3">
+                              <div className={`font-bold ${medalColors[idx] ?? "text-muted-foreground"}`}>
+                                {idx < 3 ? <Medal className="h-4 w-4" /> : idx + 1}
+                              </div>
+                            </td>
+                            <td className="px-2 py-3">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-xl shrink-0">{user.avatar}</span>
+                                <span className="font-medium truncate">{user.userName}</span>
+                                {isMe && <Badge variant="secondary" className="text-xs shrink-0">You</Badge>}
+                              </div>
+                            </td>
+                            {cols.map((c, i) => (
+                              <td key={i} className="px-2 py-3 text-right tabular-nums">
+                                <span className="font-semibold">{c.count * c.weight}</span>
+                                <span className="text-muted-foreground text-xs ml-1">({c.count}×{c.weight})</span>
+                              </td>
+                            ))}
+                            <td className="px-2 py-3 text-right tabular-nums">
+                              <span className="font-semibold">{bd?.knockout ?? 0}</span>
+                            </td>
+                            <td className="px-2 py-3 text-right">
+                              <span className="text-lg font-bold">{user.totalPoints}</span>
+                              <span className="text-muted-foreground text-xs ml-1">pts</span>
+                            </td>
+                          </tr>
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {currentUser?.userId === currentLeague.createdBy && (
+                  <div className="mt-4 pt-3 border-t border-border/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      Ready to start the knockout stage? This locks in everyone&apos;s standing
+                      multiplier based on current standings. Re-running it will recalculate and
+                      overwrite the multiplier, so only do this once, right as the knockout stage begins.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0"
+                      disabled={snapshotting}
+                      onClick={handleSnapshotStandings}
                     >
-                      <div className={`w-8 text-center font-bold text-lg ${medalColors[idx] ?? "text-muted-foreground"}`}>
-                        {idx < 3 ? <Medal className="h-5 w-5 mx-auto" /> : idx + 1}
-                      </div>
-                      <div className="text-2xl">{user.avatar}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium flex items-center gap-2">
-                          {user.userName}
-                          {isMe && <Badge variant="secondary" className="text-xs">You</Badge>}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {user.predictions?.length ?? 0} predictions made
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xl font-bold">{user.totalPoints}</div>
-                        <div className="text-xs text-muted-foreground">pts</div>
-                      </div>
-                    </div>
-                  );
-                })}
+                      {snapshotting ? "Locking in..." : "Lock In Knockout Multipliers"}
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -491,6 +575,13 @@ export default function LeaguesPage() {
               <Badge variant="secondary">0 points</Badge>
             </div>
           </div>
+          <p className="mt-4 text-xs text-muted-foreground leading-relaxed border-t border-border/40 pt-3">
+            <span className="font-medium text-foreground">Knockout picks get more interesting as the tournament goes on:</span>{" "}
+            each correct pick is worth 2 points, multiplied by a round weight (R16 1.25×, QF 1.5×, SF 2×, Final 3×), then adjusted
+            by standing - once a league&apos;s knockout stage begins, the current leader&apos;s knockout points are scaled down to as low as 0.7×
+            while last place is scaled up to as high as 1.5×, smoothly in between for everyone else. That adjustment is locked in once
+            per league right when the knockout stage starts, so it rewards catching up rather than constantly shuffling past results.
+          </p>
         </CardContent>
       </Card>
     </div>
