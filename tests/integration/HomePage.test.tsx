@@ -186,7 +186,7 @@ describe('HomePage Integration', () => {
     render(<HomePage />)
     
     expect(screen.getByText('FT')).toBeInTheDocument() // Completed match
-    expect(screen.getByText('LIVE')).toBeInTheDocument() // Live match
+    expect(screen.getAllByText('LIVE').length).toBeGreaterThan(0) // Live match (may appear multiple times)
   })
 
   it('displays match information', () => {
