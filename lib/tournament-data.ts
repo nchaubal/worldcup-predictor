@@ -280,17 +280,18 @@ export const R32_MATCHES: R32Match[] = [
   { id: "r32_4",  homeTeamId: "bra", awayTeamId: "jpn", date: "Mon Jun 29", venue: "Houston",      homeScore: 2, awayScore: 1, winner: "bra", status: "completed" },
   { id: "r32_5",  homeTeamId: "fra", awayTeamId: "swe", date: "Tue Jun 30", venue: "New Jersey",   homeScore: 3, awayScore: 0, winner: "fra", status: "completed" },
   { id: "r32_6",  homeTeamId: "civ", awayTeamId: "nor", date: "Tue Jun 30", venue: "Arlington",    homeScore: 1, awayScore: 2, winner: "nor", status: "completed" },
-  // Today / Upcoming
-  { id: "r32_7",  homeTeamId: "mex", awayTeamId: "ecu", date: "Wed Jul 1",  venue: "Mexico City",  homeScore: 2, awayScore: 0, winner: "mex", status: "completed" },
-  { id: "r32_8",  homeTeamId: "eng", awayTeamId: "cod", date: "Wed Jul 1",  venue: "Atlanta",      status: "upcoming" },
-  { id: "r32_9",  homeTeamId: "bel", awayTeamId: "sen", date: "Wed Jul 1",  venue: "Seattle",      status: "upcoming" },
-  { id: "r32_10", homeTeamId: "usa", awayTeamId: "bih", date: "Thu Jul 2",  venue: "Santa Clara",  status: "upcoming" },
-  { id: "r32_11", homeTeamId: "esp", awayTeamId: "aut", date: "Thu Jul 2",  venue: "Los Angeles",  status: "upcoming" },
-  { id: "r32_12", homeTeamId: "por", awayTeamId: "cro", date: "Fri Jul 3",  venue: "Toronto",      status: "upcoming" },
-  { id: "r32_13", homeTeamId: "sui", awayTeamId: "alg", date: "Fri Jul 3",  venue: "Vancouver",    status: "upcoming" },
+  // Completed
+  { id: "r32_7",  homeTeamId: "mex", awayTeamId: "ecu", date: "Tue Jun 30", venue: "Mexico City",  homeScore: 2, awayScore: 0, winner: "mex", status: "completed" },
+  { id: "r32_8",  homeTeamId: "eng", awayTeamId: "cod", date: "Wed Jul 1",  venue: "Atlanta",      homeScore: 2, awayScore: 1, winner: "eng", status: "completed" },
+  { id: "r32_9",  homeTeamId: "bel", awayTeamId: "sen", date: "Wed Jul 1",  venue: "Seattle",      homeScore: 2, awayScore: 2, pens: "4-3", winner: "bel", status: "completed" },
+  { id: "r32_10", homeTeamId: "usa", awayTeamId: "bih", date: "Wed Jul 1",  venue: "Santa Clara",  homeScore: 2, awayScore: 0, winner: "usa", status: "completed" },
+  { id: "r32_11", homeTeamId: "esp", awayTeamId: "aut", date: "Thu Jul 2",  venue: "Los Angeles",  homeScore: 3, awayScore: 0, winner: "esp", status: "completed" },
+  { id: "r32_12", homeTeamId: "por", awayTeamId: "cro", date: "Thu Jul 2",  venue: "Toronto",      homeScore: 2, awayScore: 1, winner: "por", status: "completed" },
+  { id: "r32_13", homeTeamId: "sui", awayTeamId: "alg", date: "Thu Jul 2",  venue: "Vancouver",    homeScore: 2, awayScore: 0, winner: "sui", status: "completed" },
   { id: "r32_14", homeTeamId: "aus", awayTeamId: "egy", date: "Fri Jul 3",  venue: "Arlington",    homeScore: 1, awayScore: 1, pens: "2-4", winner: "egy", status: "completed" },
-  { id: "r32_15", homeTeamId: "arg", awayTeamId: "cpv", date: "Fri Jul 3",  venue: "Miami",        status: "upcoming" },
-  { id: "r32_16", homeTeamId: "col", awayTeamId: "gha", date: "Sat Jul 4",  venue: "Kansas City",  status: "upcoming" },
+  // Live / Upcoming
+  { id: "r32_15", homeTeamId: "arg", awayTeamId: "cpv", date: "Fri Jul 3",  venue: "Miami",        status: "live" },
+  { id: "r32_16", homeTeamId: "col", awayTeamId: "gha", date: "Fri Jul 3",  venue: "Kansas City",  status: "upcoming" },
 ];
 
 // Round of 16 fixtures (teams TBD based on R32 winners)

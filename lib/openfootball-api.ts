@@ -81,9 +81,12 @@ const TEAM_NAME_MAP: Record<string, string> = {
   'Türkiye': 'Turkey',
   'Bosnia-Herzegovina': 'Bosnia & Herzegovina',  // football-data.org → OpenFootball
   'Bosnia and Herzegovina': 'Bosnia & Herzegovina',
+  'Bosnia & Herz.': 'Bosnia & Herzegovina',  // tournament-data.ts → OpenFootball
   'DR Congo': 'Congo DR',
+  'Congo DR': 'DR Congo',  // OpenFootball uses "DR Congo"
   'Côte d\'Ivoire': 'Ivory Coast',
   'Cape Verde': 'Cabo Verde',
+  'Cape Verde Islands': 'Cape Verde',  // football-data.org uses this
 };
 
 function normalizeTeamName(name: string): string {
