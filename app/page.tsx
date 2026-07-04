@@ -297,26 +297,6 @@ export default function HomePage() {
                             )) : <span className="text-muted-foreground/50 italic">No goals</span>}
                           </div>
                         </div>
-                        {matchDetails.cards.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-border/20">
-                            <div className="grid grid-cols-2 gap-4 text-[10px] text-muted-foreground">
-                              <div className="text-left">
-                                {matchDetails.cards.filter(c => c.team === 'home').map((card, i) => (
-                                  <div key={i}>
-                                    {card.type === 'red' ? '🟥' : card.type === 'yellowred' ? '🟨🟥' : '🟨'} {card.player} {card.minute}&apos;
-                                  </div>
-                                ))}
-                              </div>
-                              <div className="text-right">
-                                {matchDetails.cards.filter(c => c.team === 'away').map((card, i) => (
-                                  <div key={i}>
-                                    {card.type === 'red' ? '🟥' : card.type === 'yellowred' ? '🟨🟥' : '🟨'} {card.player} {card.minute}&apos;
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     )}
                   </CardContent>
