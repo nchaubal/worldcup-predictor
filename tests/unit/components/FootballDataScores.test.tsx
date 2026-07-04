@@ -14,6 +14,7 @@ jest.mock('@/hooks/useFootballData', () => ({
     ...mockHookState,
     fetchLiveMatches: jest.fn(),
     fetchTodayMatches: jest.fn(),
+    fetchUpcomingMatches: jest.fn(),
   }),
 }));
 
@@ -50,7 +51,7 @@ describe('FootballDataScores', () => {
 
   it('renders empty state when no matches', () => {
     render(<FootballDataScores />);
-    expect(screen.getByText('No recent World Cup matches found')).toBeInTheDocument();
+    expect(screen.getByText('No upcoming World Cup matches found')).toBeInTheDocument();
   });
 
   it('renders matches when available', () => {
