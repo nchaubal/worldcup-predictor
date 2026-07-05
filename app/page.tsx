@@ -11,6 +11,7 @@ import { MapPin, CheckCircle2, Clock, Radio, Calendar, Trophy, ChevronRight, Che
 import { getTeamById, UserPredictions } from "@/lib/tournament-data";
 import { syncTournamentWithFootballData, isPredictionLocked as checkPredictionLocked } from "@/lib/football-data-sync";
 import { useFootballData } from "@/hooks/useFootballData";
+import { useOpenFootball } from "@/hooks/useOpenFootball";
 import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 
 type MatchStatus = "completed" | "live" | "upcoming";
@@ -88,6 +89,7 @@ export default function HomePage() {
   const [expandedMatches, setExpandedMatches] = useState<Set<string>>(new Set());
   const [leaderboard, setLeaderboard] = useState<UserPredictions[]>([]);
   const { matches: footballMatches, fetchWorldCupMatches } = useFootballData();
+  const { getMatchDetails: getOpenFootballDetails } = useOpenFootball();
   const { getLeaderboard, currentUser, predictions, isAuthenticated } = useTournamentSupabase();
   
   const toggleMatchExpanded = (matchId: string) => {
@@ -148,6 +150,12 @@ export default function HomePage() {
     const homeWon = m.winner === (m.homeTeamId || homeTeam.id);
     const awayWon = m.winner === (m.awayTeamId || awayTeam.id);
     
+    // Get match details from OpenFootball API (includes goal scorers)
+    const openFootballDetails = isCompleted ? getOpenFootballDetails(homeTeam.name, awayTeam.name) : null;
+    // Use OpenFootball goals if available, otherwise fall back to static data
+    const goals = openFootballDetails?.goals || m.goals || [];
+    const hasGoals = goals.length > 0;
+    
     // Calculate time to kickoff for upcoming matches
     const kickoffInfo = isUpcoming ? getTimeUntilKickoff(m.utcDate, m.date) : null;
     // Use the centralized isPredictionLocked function
@@ -196,8 +204,8 @@ export default function HomePage() {
             )}
           </div>
           <div 
-            className={cn("flex items-center gap-2", isCompleted && m.goals && m.goals.length > 0 && "cursor-pointer")}
-            onClick={isCompleted && m.goals && m.goals.length > 0 ? () => toggleMatchExpanded(m.id) : undefined}
+            className={cn("flex items-center gap-2", isCompleted && hasGoals && "cursor-pointer")}
+            onClick={isCompleted && hasGoals ? () => toggleMatchExpanded(m.id) : undefined}
           >
             <div className={cn("flex-1 flex items-center gap-2", isCompleted && !homeWon && "opacity-40")}>
               <span className="text-xl">{homeTeam.flag}</span>
@@ -221,7 +229,7 @@ export default function HomePage() {
               <span className="text-xl">{awayTeam.flag}</span>
             </div>
             {/* Expand indicator for completed matches with goals */}
-            {isCompleted && m.goals && m.goals.length > 0 && (
+            {isCompleted && hasGoals && (
               <div className="shrink-0 ml-1">
                 {expandedMatches.has(m.id) ? (
                   <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -232,12 +240,12 @@ export default function HomePage() {
             )}
           </div>
           {/* Expanded goal details */}
-          {isCompleted && expandedMatches.has(m.id) && m.goals && m.goals.length > 0 && (
+          {isCompleted && expandedMatches.has(m.id) && hasGoals && (
             <div className="mt-3 pt-3 border-t border-border/50">
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                 {/* Home team goals */}
                 <div className="space-y-1">
-                  {m.goals.filter(g => g.team === 'home').map((goal, idx) => (
+                  {goals.filter(g => g.team === 'home').map((goal, idx) => (
                     <div key={idx} className="flex items-center gap-2 text-xs">
                       <span className="text-muted-foreground font-mono">{goal.minute}&apos;</span>
                       <span className={cn(goal.ownGoal && "text-red-400")}>
@@ -250,7 +258,7 @@ export default function HomePage() {
                 </div>
                 {/* Away team goals */}
                 <div className="space-y-1 text-right">
-                  {m.goals.filter(g => g.team === 'away').map((goal, idx) => (
+                  {goals.filter(g => g.team === 'away').map((goal, idx) => (
                     <div key={idx} className="flex items-center justify-end gap-2 text-xs">
                       <span className={cn(goal.ownGoal && "text-red-400")}>
                         {goal.penalty && <span className="text-muted-foreground mr-1">(P)</span>}

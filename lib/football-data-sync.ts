@@ -37,8 +37,8 @@ export interface TournamentMatch {
   elapsedTime?: string;
 }
 
-// Static goal data for completed matches (API free tier doesn't include goal scorers)
-// This can be manually updated as matches complete
+// Static goal data as fallback when OpenFootball API doesn't have the data
+// Primary source is OpenFootball API (lib/openfootball-api.ts)
 const MATCH_GOALS: Record<string, GoalEvent[]> = {
   // R16 Match 1: Morocco 4-0 Canada (Sat Jul 5)
   'r16_1': [
