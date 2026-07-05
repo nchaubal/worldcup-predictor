@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, CheckCircle2, Clock, Radio, Calendar, Trophy, ChevronRight, ChevronDown, ChevronUp, Crown, Medal, AlertTriangle } from "lucide-react";
 import { getTeamById, UserPredictions } from "@/lib/tournament-data";
-import { syncTournamentWithFootballData } from "@/lib/football-data-sync";
+import { syncTournamentWithFootballData, isPredictionLocked as checkPredictionLocked } from "@/lib/football-data-sync";
 import { useFootballData } from "@/hooks/useFootballData";
 import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 
@@ -27,27 +27,21 @@ const statusLabel: Record<MatchStatus, string> = {
   upcoming:  "Upcoming",
 };
 
-// Helper to calculate time until kickoff
-function getTimeUntilKickoff(dateStr: string): { text: string; isLocked: boolean; isClosing: boolean } {
-  // Parse date like "Jun 14, 8:00 PM" or "Jul 4, 2026, 8:00 PM"
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  
-  // Add year if not present
-  let fullDateStr = dateStr;
-  if (!dateStr.includes('2026') && !dateStr.includes('2025')) {
-    const parts = dateStr.split(',');
-    if (parts.length === 2) {
-      fullDateStr = `${parts[0]}, ${currentYear},${parts[1]}`;
-    }
+// Helper to calculate time until kickoff - uses utcDate from API
+function getTimeUntilKickoff(utcDate: string | undefined, fallbackDate: string): { text: string; isLocked: boolean; isClosing: boolean } {
+  // If no UTC date, just show the fallback date string
+  if (!utcDate) {
+    return { text: fallbackDate, isLocked: false, isClosing: false };
   }
   
-  const kickoff = new Date(fullDateStr);
-  if (isNaN(kickoff.getTime())) {
-    return { text: dateStr, isLocked: false, isClosing: false };
+  const now = Date.now();
+  const kickoff = new Date(utcDate).getTime();
+  
+  if (isNaN(kickoff)) {
+    return { text: fallbackDate, isLocked: false, isClosing: false };
   }
   
-  const diffMs = kickoff.getTime() - now.getTime();
+  const diffMs = kickoff - now;
   const diffMins = Math.floor(diffMs / 60000);
   
   // Already started or passed
@@ -142,8 +136,9 @@ export default function HomePage() {
     const awayWon = m.winner === (m.awayTeamId || awayTeam.id);
     
     // Calculate time to kickoff for upcoming matches
-    const kickoffInfo = isUpcoming ? getTimeUntilKickoff(m.date) : null;
-    const isPredictionLocked = kickoffInfo?.isLocked || isLive || isCompleted;
+    const kickoffInfo = isUpcoming ? getTimeUntilKickoff(m.utcDate, m.date) : null;
+    // Use the centralized isPredictionLocked function
+    const isPredictionLocked = checkPredictionLocked(m);
     
     return (
       <Card 
