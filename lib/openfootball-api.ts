@@ -74,19 +74,21 @@ export async function fetchOpenFootballData(): Promise<OpenFootballData> {
 }
 
 // Normalize team names for matching between APIs
-// Maps various name formats to a canonical form
+// Maps various name formats to a canonical form used by OpenFootball
 const TEAM_NAME_MAP: Record<string, string> = {
+  // Our tournament-data.ts names → OpenFootball names
+  'Bosnia & Herz.': 'Bosnia & Herzegovina',
+  'Türkiye': 'Turkey',
+  'Czechia': 'Czech Republic',
+  
+  // Football-data.org names → OpenFootball names
   'United States': 'USA',
   'Korea Republic': 'South Korea',
-  'Türkiye': 'Turkey',
-  'Bosnia-Herzegovina': 'Bosnia & Herzegovina',  // football-data.org → OpenFootball
+  'Bosnia-Herzegovina': 'Bosnia & Herzegovina',
   'Bosnia and Herzegovina': 'Bosnia & Herzegovina',
-  'Bosnia & Herz.': 'Bosnia & Herzegovina',  // tournament-data.ts → OpenFootball
-  'DR Congo': 'Congo DR',
-  'Congo DR': 'DR Congo',  // OpenFootball uses "DR Congo"
   'Côte d\'Ivoire': 'Ivory Coast',
-  'Cape Verde': 'Cabo Verde',
-  'Cape Verde Islands': 'Cape Verde',  // football-data.org uses this
+  'Cape Verde Islands': 'Cape Verde',
+  'Congo DR': 'DR Congo',
 };
 
 function normalizeTeamName(name: string): string {
