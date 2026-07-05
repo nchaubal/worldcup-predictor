@@ -40,17 +40,28 @@ export interface TournamentMatch {
 // Static goal data as fallback when OpenFootball API doesn't have the data
 // Primary source is OpenFootball API (lib/openfootball-api.ts)
 const MATCH_GOALS: Record<string, GoalEvent[]> = {
-  // R16 Match 1: Morocco 4-0 Canada (Sat Jul 5)
-  'r16_1': [
-    { scorer: 'Hakimi', minute: '12', team: 'away', penalty: false },
-    { scorer: 'En-Nesyri', minute: '34', team: 'away', penalty: false },
-    { scorer: 'Ziyech', minute: '56', team: 'away', penalty: false },
-    { scorer: 'Diaz', minute: '78', team: 'away', penalty: false },
+  // R32 matches
+  'r32_7': [ // Mexico 2-0 Ecuador (Tue Jun 30)
+    { scorer: 'Julián Quiñones', minute: '31', team: 'home' },
+    { scorer: 'Raúl Jiménez', minute: '45+1', team: 'home' },
   ],
-  // R16 Match 2: Paraguay 1-1 France (Sat Jul 5) - Paraguay wins on penalties
-  'r16_2': [
-    { scorer: 'Almirón', minute: '23', team: 'home', penalty: false },
-    { scorer: 'Mbappé', minute: '67', team: 'away', penalty: false },
+  'r32_13': [ // Switzerland 2-0 Algeria (Thu Jul 2)
+    { scorer: 'Breel Embolo', minute: '10', team: 'home' },
+    { scorer: 'Dan Ndoye', minute: '46', team: 'home' },
+  ],
+  'r32_16': [ // Colombia 1-0 Ghana (Fri Jul 3)
+    { scorer: 'Jhon Arias', minute: '14', team: 'home' },
+  ],
+  // R16 matches
+  'r16_1': [ // Canada 0-4 Morocco (Sat Jul 5)
+    { scorer: 'Hakimi', minute: '12', team: 'away' },
+    { scorer: 'En-Nesyri', minute: '34', team: 'away' },
+    { scorer: 'Ziyech', minute: '56', team: 'away' },
+    { scorer: 'Diaz', minute: '78', team: 'away' },
+  ],
+  'r16_2': [ // Paraguay 1-1 France (Sat Jul 5) - Paraguay wins on penalties
+    { scorer: 'Almirón', minute: '23', team: 'home' },
+    { scorer: 'Mbappé', minute: '67', team: 'away' },
   ],
 };
 
@@ -113,7 +124,7 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
   // If match is already completed in static data, trust our static data
   // (handles cases where API data is incorrect, like penalty shootout scores)
   if (match.status === 'completed' && match.winner) {
-    return match;
+    return { ...match, goals: MATCH_GOALS[match.id] };
   }
 
   // Find matching Football Data match by team names
@@ -134,7 +145,7 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
   });
 
   if (!footballMatch) {
-    return match;
+    return { ...match, goals: MATCH_GOALS[match.id] };
   }
 
   // Check if teams are flipped in the API response
@@ -184,6 +195,7 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
     winner: winner ?? match.winner,
     status: isCompleted ? 'completed' : isLive ? 'live' : 'upcoming',
     pens: pens ?? match.pens,
+    goals: MATCH_GOALS[match.id],
   };
 }
 
