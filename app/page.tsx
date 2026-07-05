@@ -222,15 +222,7 @@ export default function HomePage() {
               )}
             </div>
           )}
-          {/* Show make prediction button if no prediction yet */}
-          {showPredictButton && !isCompleted && !isLive && !isPredictionLocked && (!isAuthenticated || !userPrediction) && (
-            <Link href="/predict" className="block mt-3">
-              <Button size="sm" className="w-full">
-                Make Prediction <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          )}
-          {/* Show locked message if no prediction and locked */}
+          {/* Show locked badge if prediction is locked and user has no prediction */}
           {showPredictButton && !isCompleted && !isLive && isPredictionLocked && !userPrediction && isAuthenticated && (
             <div className="mt-3 text-center">
               <Badge variant="destructive" className="text-xs">
@@ -379,8 +371,10 @@ export default function HomePage() {
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <h2 className="text-lg font-bold">Upcoming Matches</h2>
               </div>
-              <Link href="/predict" className="text-sm text-primary hover:underline flex items-center gap-1">
-                View all <ChevronRight className="h-4 w-4" />
+              <Link href="/predict">
+                <Button size="sm" variant="default">
+                  Make Predictions <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
               </Link>
             </div>
             <div className="grid gap-3">
