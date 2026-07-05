@@ -322,10 +322,10 @@ export type R16Match = {
 };
 
 export const R16_MATCHES: R16Match[] = [
-  // Today's matches (Jul 4)
-  { id: "r16_1", homeTeamId: "can", awayTeamId: "mar", date: "Sat Jul 4",  venue: "Houston",       status: "upcoming" },
-  { id: "r16_2", homeTeamId: "par", awayTeamId: "fra", date: "Sat Jul 4",  venue: "Philadelphia",  status: "upcoming" },
-  // Tomorrow (Jul 5)
+  // Completed (Jul 4)
+  { id: "r16_1", homeTeamId: "can", awayTeamId: "mar", date: "Sat Jul 5",  venue: "Houston",       homeScore: 0, awayScore: 4, winner: "mar", status: "completed" },
+  { id: "r16_2", homeTeamId: "par", awayTeamId: "fra", date: "Sat Jul 5",  venue: "Philadelphia",  homeScore: 0, awayScore: 0, pens: "5-3", winner: "par", status: "completed" },
+  // Today (Jul 5)
   { id: "r16_3", homeTeamId: "bra", awayTeamId: "nor", date: "Sun Jul 5",  venue: "New Jersey",    status: "upcoming" },
   // Jul 6
   { id: "r16_4", homeTeamId: "mex", awayTeamId: "eng", date: "Mon Jul 6",  venue: "Mexico City",   status: "upcoming" },

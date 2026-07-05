@@ -444,9 +444,30 @@ export default function BracketPage() {
     ["r16_8", "r32_13", "r32_16"],
   ];
 
-  const r16: MatchDef[] = R16_SOURCES.map(([id, a, b]) => ({
-    id, teamAId: r32W(a), teamBId: r32W(b), winnerId: picks[id] ?? null,
-  }));
+  // R16 winner helper with dynamic sync
+  const r16W = (matchId: string): string | null => {
+    const syncedTournament = syncTournamentWithFootballData(footballMatches);
+    const syncedMatch = syncedTournament.r16.find(m => m.id === matchId);
+    return syncedMatch?.winner ?? picks[matchId] ?? null;
+  };
+
+  // Build R16 matches with synced data
+  const r16: MatchDef[] = R16_SOURCES.map(([id, a, b]) => {
+    const syncedTournament = syncTournamentWithFootballData(footballMatches);
+    const syncedMatch = syncedTournament.r16.find(m => m.id === id);
+    
+    return {
+      id,
+      teamAId: r32W(a),
+      teamBId: r32W(b),
+      winnerId: syncedMatch?.winner ?? picks[id] ?? null,
+      scoreA: syncedMatch?.homeScore,
+      scoreB: syncedMatch?.awayScore,
+      pens: syncedMatch?.pens,
+      status: syncedMatch?.status,
+      venue: syncedMatch?.venue,
+    };
+  });
 
   // QF pairings based on official bracket:
   // First half:
@@ -456,10 +477,10 @@ export default function BracketPage() {
   //   qf_3: r16_3 vs r16_4 (Brazil/Norway vs Mexico/England)
   //   qf_4: r16_8 vs r16_7 (Switzerland/Colombia vs Argentina/Australia)
   const qf: MatchDef[] = [
-    { id: "qf_1", teamAId: picks["r16_1"] ?? null, teamBId: picks["r16_2"] ?? null, winnerId: picks["qf_1"] ?? null },
-    { id: "qf_2", teamAId: picks["r16_6"] ?? null, teamBId: picks["r16_5"] ?? null, winnerId: picks["qf_2"] ?? null },
-    { id: "qf_3", teamAId: picks["r16_3"] ?? null, teamBId: picks["r16_4"] ?? null, winnerId: picks["qf_3"] ?? null },
-    { id: "qf_4", teamAId: picks["r16_8"] ?? null, teamBId: picks["r16_7"] ?? null, winnerId: picks["qf_4"] ?? null },
+    { id: "qf_1", teamAId: r16W("r16_1"), teamBId: r16W("r16_2"), winnerId: picks["qf_1"] ?? null },
+    { id: "qf_2", teamAId: r16W("r16_6"), teamBId: r16W("r16_5"), winnerId: picks["qf_2"] ?? null },
+    { id: "qf_3", teamAId: r16W("r16_3"), teamBId: r16W("r16_4"), winnerId: picks["qf_3"] ?? null },
+    { id: "qf_4", teamAId: r16W("r16_8"), teamBId: r16W("r16_7"), winnerId: picks["qf_4"] ?? null },
   ];
 
   // SF pairings:
