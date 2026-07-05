@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
 import { Prediction, UserPredictions, GROUP_MATCHES, KNOCKOUT_MATCHES } from "@/lib/tournament-data";
 import { SupabaseService, Profile } from "@/lib/supabase";
-import { MOCK_USERS } from "@/lib/mock-data";
 import { supabase } from "@/lib/supabase";
 import { 
   calculateTotalPoints, 

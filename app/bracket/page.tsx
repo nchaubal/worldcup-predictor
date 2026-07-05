@@ -32,9 +32,9 @@ type MatchDef = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Slot — one team row inside a match card (display only, click handled by parent)
 // ─────────────────────────────────────────────────────────────────────────────
-function Slot({ team, picked, lost, score, isResult }: {
+function Slot({ team, picked, lost, score }: {
   team: Team | null; picked: boolean; lost: boolean;
-  score?: number; isResult?: boolean;
+  score?: number;
 }) {
   if (!team) return (
     <div className="flex items-center gap-2 px-2.5 py-2 text-xs text-muted-foreground/40 italic">TBD</div>
@@ -64,8 +64,8 @@ function Slot({ team, picked, lost, score, isResult }: {
 // ─────────────────────────────────────────────────────────────────────────────
 // MatchCard
 // ─────────────────────────────────────────────────────────────────────────────
-function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, status, onScorePick, venue, predictedScoreA, predictedScoreB }: {
-  matchId: string; teamA: Team | null; teamB: Team | null;
+function MatchCard({ teamA, teamB, winnerId, scoreA, scoreB, pens, status, onScorePick, venue, predictedScoreA, predictedScoreB }: {
+  teamA: Team | null; teamB: Team | null;
   winnerId?: string | null; scoreA?: number; scoreB?: number;
   pens?: string; status?: "completed" | "live" | "upcoming";
   onScorePick?: (teamId: string, homeScore: number, awayScore: number) => void;
@@ -125,9 +125,9 @@ function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, stat
           onClick={!isResult && !isLive && teamA && teamB ? () => { setScoreOpen(true); setTempScoreA(predictedScoreA ?? 0); setTempScoreB(predictedScoreB ?? 0); } : undefined}
         >
           <Slot team={teamA} picked={wonA} lost={isResult && !wonA && !!teamA}
-            score={scoreA} isResult={isResult || isLive} />
+            score={scoreA} />
           <Slot team={teamB} picked={wonB} lost={isResult && !wonB && !!teamB}
-            score={scoreB} isResult={isResult || isLive} />
+            score={scoreB} />
         </div>
         {/* Action buttons */}
         {!isResult && !isLive && teamA && teamB && (
@@ -249,7 +249,7 @@ function SFConnector({ flip }: { flip?: boolean }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // FinalConnector — SF to Final connector (single line to center)
 // ─────────────────────────────────────────────────────────────────────────────
-function FinalConnector({ flip: _flip }: { flip?: boolean }) {
+function FinalConnector() {
   return (
     <div className="flex flex-col justify-center self-stretch shrink-0" style={{ width: GAP }}>
       <div className="h-0.5 bg-border/35" />
@@ -272,7 +272,6 @@ function Col({ matches, picks, scores, onScorePick }: {
       {matches.map(m => (
         <MatchCard
           key={m.id}
-          matchId={m.id}
           teamA={getT(m.teamAId)}
           teamB={getT(m.teamBId)}
           winnerId={m.winnerId ?? picks[m.id] ?? null}
@@ -626,7 +625,6 @@ export default function BracketPage() {
             {/* Left SF */}
             <div className="flex flex-col justify-center shrink-0" style={{ width: CW }}>
               <MatchCard
-                matchId="sf_1"
                 teamA={TEAMS.find(t => t.id === sf[0].teamAId) ?? null}
                 teamB={TEAMS.find(t => t.id === sf[0].teamBId) ?? null}
                 winnerId={sf[0].winnerId ?? picks["sf_1"] ?? null}
@@ -637,12 +635,11 @@ export default function BracketPage() {
               />
             </div>
             {/* SF→Final connector */}
-            <FinalConnector flip={false} />
+            <FinalConnector />
 
             {/* Final + champion */}
             <div className="flex flex-col items-center justify-center shrink-0" style={{ width: CW }}>
               <MatchCard
-                matchId="final"
                 teamA={TEAMS.find(t => t.id === finalMatch.teamAId) ?? null}
                 teamB={TEAMS.find(t => t.id === finalMatch.teamBId) ?? null}
                 winnerId={finalMatch.winnerId}
@@ -662,11 +659,10 @@ export default function BracketPage() {
             </div>
 
             {/* Right connectors mirror left, converging back into the Final */}
-            <FinalConnector flip />
+            <FinalConnector />
             {/* Right SF */}
             <div className="flex flex-col justify-center shrink-0" style={{ width: CW }}>
               <MatchCard
-                matchId="sf_2"
                 teamA={TEAMS.find(t => t.id === sf[1].teamAId) ?? null}
                 teamB={TEAMS.find(t => t.id === sf[1].teamBId) ?? null}
                 winnerId={sf[1].winnerId ?? picks["sf_2"] ?? null}

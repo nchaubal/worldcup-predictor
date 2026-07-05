@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 import { SupabaseService, Profile } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,11 +36,7 @@ export default function AdminPage() {
     fetchWorldCupMatches();
   }, [fetchWorldCupMatches]);
 
-  useEffect(() => {
-    loadData();
-  }, [isAdmin]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!isAdmin) {
       setLoading(false);
       return;
@@ -58,7 +54,12 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadData();
+  }, [loadData]);
 
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
@@ -72,7 +73,7 @@ export default function AdminPage() {
       setAllowedEmails(prev => [...prev, newEmail.trim().toLowerCase()]);
       setNewEmail("");
       showMessage('success', 'Email added to allowlist');
-    } catch (error) {
+    } catch {
       showMessage('error', 'Failed to add email');
     }
   };
@@ -82,7 +83,7 @@ export default function AdminPage() {
       await SupabaseService.removeAllowedEmail(email);
       setAllowedEmails(prev => prev.filter(e => e !== email));
       showMessage('success', 'Email removed from allowlist');
-    } catch (error) {
+    } catch {
       showMessage('error', 'Failed to remove email');
     }
   };
@@ -92,7 +93,7 @@ export default function AdminPage() {
       // This would need a new method in SupabaseService
       // For now, show instructions
       showMessage('error', 'Run SQL: UPDATE profiles SET is_admin = ' + (!currentStatus) + ' WHERE id = \'' + userId + '\'');
-    } catch (error) {
+    } catch {
       showMessage('error', 'Failed to update admin status');
     }
   };
@@ -122,8 +123,9 @@ export default function AdminPage() {
       setPredictionMatch(null);
       setPredHome("");
       setPredAway("");
-    } catch (error: any) {
-      showMessage('error', error.message || 'Failed to add prediction');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to add prediction';
+      showMessage('error', message);
     }
   };
 
@@ -154,7 +156,7 @@ export default function AdminPage() {
           <CardContent className="pt-6 text-center">
             <AlertTriangle className="h-12 w-12 mx-auto text-red-500 mb-4" />
             <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-            <p className="text-muted-foreground">You don't have admin privileges.</p>
+            <p className="text-muted-foreground">You don&apos;t have admin privileges.</p>
           </CardContent>
         </Card>
       </div>

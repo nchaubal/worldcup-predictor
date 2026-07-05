@@ -7,12 +7,12 @@ import { getTeamById } from "@/lib/tournament-data";
 import { useFootballData } from "@/hooks/useFootballData";
 import { syncTournamentWithFootballData } from "@/lib/football-data-sync";
 import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
-import { History, CheckCircle2, Trophy, TrendingUp } from "lucide-react";
+import { History, CheckCircle2, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function HistoryPage() {
   const { matches: footballMatches, fetchWorldCupMatches } = useFootballData();
-  const { predictions, isAuthenticated, currentUser, getTotalPoints, getPointsBreakdown } = useTournamentSupabase();
+  const { predictions, isAuthenticated, getTotalPoints, getPointsBreakdown } = useTournamentSupabase();
 
   useEffect(() => {
     fetchWorldCupMatches();

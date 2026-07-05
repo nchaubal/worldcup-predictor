@@ -14,10 +14,8 @@ import { calculateMatchPoints, type MatchResult as PointsMatchResult } from "@/l
 import { Clock, CheckCircle2, Radio, Lock, Users, MapPin, Trophy, Edit3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type MatchStatus = "completed" | "live" | "upcoming";
-
 // Check if predictions are locked (5 minutes before kickoff)
-const isPredictionLocked = (matchDate: string, matchTime?: string): boolean => {
+const isPredictionLocked = (): boolean => {
   // For now, return false for upcoming matches (will implement proper time check)
   // In production, parse the date/time and check if current time is within 5 mins of kickoff
   return false;
@@ -26,7 +24,7 @@ const isPredictionLocked = (matchDate: string, matchTime?: string): boolean => {
 export default function PredictPage() {
   const [activeTab, setActiveTab] = useState<"upcoming" | "completed">("upcoming");
   const { matches: footballMatches, fetchWorldCupMatches } = useFootballData();
-  const { predictions, setPrediction, isAuthenticated, currentUser } = useTournamentSupabase();
+  const { predictions, setPrediction, isAuthenticated } = useTournamentSupabase();
   
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -87,7 +85,7 @@ export default function PredictPage() {
     
     const isCompleted = m.status === "completed";
     const isLive = m.status === "live";
-    const isLocked = isLive || isCompleted || isPredictionLocked(m.date);
+    const isLocked = isLive || isCompleted || isPredictionLocked();
     const userPrediction = getUserPrediction(m.id);
     const homeWon = m.winner === (m.homeTeamId || homeTeam.id);
     const awayWon = m.winner === (m.awayTeamId || awayTeam.id);

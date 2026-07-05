@@ -63,7 +63,8 @@ export function PredictionModal({
   // Step 3: Penalty winner (always required)
   const [penaltyWinner, setPenaltyWinner] = useState<string | null>(null);
 
-  // Reset state when modal opens
+  // Reset state when modal opens - this is intentional initialization
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isOpen) {
       if (existingPrediction) {
@@ -81,6 +82,7 @@ export function PredictionModal({
       }
     }
   }, [isOpen, existingPrediction]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const homeScoreNum = parseInt(homeScore) || 0;
   const awayScoreNum = parseInt(awayScore) || 0;
