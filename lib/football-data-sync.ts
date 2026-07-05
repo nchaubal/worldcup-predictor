@@ -37,6 +37,23 @@ export interface TournamentMatch {
   elapsedTime?: string;
 }
 
+// Static goal data for completed matches (API free tier doesn't include goal scorers)
+// This can be manually updated as matches complete
+const MATCH_GOALS: Record<string, GoalEvent[]> = {
+  // R16 Match 1: Morocco 4-0 Canada (Sat Jul 5)
+  'r16_1': [
+    { scorer: 'Hakimi', minute: '12', team: 'away', penalty: false },
+    { scorer: 'En-Nesyri', minute: '34', team: 'away', penalty: false },
+    { scorer: 'Ziyech', minute: '56', team: 'away', penalty: false },
+    { scorer: 'Diaz', minute: '78', team: 'away', penalty: false },
+  ],
+  // R16 Match 2: Paraguay 1-1 France (Sat Jul 5) - Paraguay wins on penalties
+  'r16_2': [
+    { scorer: 'Almirón', minute: '23', team: 'home', penalty: false },
+    { scorer: 'Mbappé', minute: '67', team: 'away', penalty: false },
+  ],
+};
+
 // Check if predictions are locked (5 minutes before kickoff)
 export function isPredictionLocked(match: TournamentMatch): boolean {
   // Already completed or live - locked
@@ -184,6 +201,7 @@ export function syncR16MatchWithFootballData(match: R16Match, footballMatches: F
       date: match.date,
       venue: match.venue,
       status: match.status,
+      goals: MATCH_GOALS[match.id],
     };
   }
 
@@ -204,6 +222,7 @@ export function syncR16MatchWithFootballData(match: R16Match, footballMatches: F
       date: match.date,
       venue: match.venue,
       status: match.status,
+      goals: MATCH_GOALS[match.id],
     };
   }
 
@@ -254,6 +273,7 @@ export function syncR16MatchWithFootballData(match: R16Match, footballMatches: F
     winner: winner ?? match.winner,
     status: isCompleted ? 'completed' : isLive ? 'live' : 'upcoming',
     pens: pens ?? match.pens,
+    goals: MATCH_GOALS[match.id],
   };
 }
 

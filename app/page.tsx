@@ -85,9 +85,22 @@ function getTimeUntilKickoff(utcDate: string | undefined, fallbackDate: string):
 
 export default function HomePage() {
   const [showPastGames, setShowPastGames] = useState(false);
+  const [expandedMatches, setExpandedMatches] = useState<Set<string>>(new Set());
   const [leaderboard, setLeaderboard] = useState<UserPredictions[]>([]);
   const { matches: footballMatches, fetchWorldCupMatches } = useFootballData();
   const { getLeaderboard, currentUser, predictions, isAuthenticated } = useTournamentSupabase();
+  
+  const toggleMatchExpanded = (matchId: string) => {
+    setExpandedMatches(prev => {
+      const next = new Set(prev);
+      if (next.has(matchId)) {
+        next.delete(matchId);
+      } else {
+        next.add(matchId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetchWorldCupMatches();
@@ -182,7 +195,10 @@ export default function HomePage() {
               </>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div 
+            className={cn("flex items-center gap-2", isCompleted && m.goals && m.goals.length > 0 && "cursor-pointer")}
+            onClick={isCompleted && m.goals && m.goals.length > 0 ? () => toggleMatchExpanded(m.id) : undefined}
+          >
             <div className={cn("flex-1 flex items-center gap-2", isCompleted && !homeWon && "opacity-40")}>
               <span className="text-xl">{homeTeam.flag}</span>
               <span className={cn("text-sm font-semibold truncate", homeWon && "text-primary")}>{homeTeam.name}</span>
@@ -204,7 +220,50 @@ export default function HomePage() {
               <span className={cn("text-sm font-semibold truncate", awayWon && "text-primary")}>{awayTeam.name}</span>
               <span className="text-xl">{awayTeam.flag}</span>
             </div>
+            {/* Expand indicator for completed matches with goals */}
+            {isCompleted && m.goals && m.goals.length > 0 && (
+              <div className="shrink-0 ml-1">
+                {expandedMatches.has(m.id) ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            )}
           </div>
+          {/* Expanded goal details */}
+          {isCompleted && expandedMatches.has(m.id) && m.goals && m.goals.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {/* Home team goals */}
+                <div className="space-y-1">
+                  {m.goals.filter(g => g.team === 'home').map((goal, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground font-mono">{goal.minute}&apos;</span>
+                      <span className={cn(goal.ownGoal && "text-red-400")}>
+                        {goal.scorer}
+                        {goal.penalty && <span className="text-muted-foreground ml-1">(P)</span>}
+                        {goal.ownGoal && <span className="text-red-400 ml-1">(OG)</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {/* Away team goals */}
+                <div className="space-y-1 text-right">
+                  {m.goals.filter(g => g.team === 'away').map((goal, idx) => (
+                    <div key={idx} className="flex items-center justify-end gap-2 text-xs">
+                      <span className={cn(goal.ownGoal && "text-red-400")}>
+                        {goal.penalty && <span className="text-muted-foreground mr-1">(P)</span>}
+                        {goal.ownGoal && <span className="text-red-400 mr-1">(OG)</span>}
+                        {goal.scorer}
+                      </span>
+                      <span className="text-muted-foreground font-mono">{goal.minute}&apos;</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           {/* Show prediction if user has one */}
           {showPredictButton && !isCompleted && !isLive && isAuthenticated && userPrediction && (
             <div className="mt-3 flex items-center justify-between gap-3">
