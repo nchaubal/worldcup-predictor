@@ -2,7 +2,7 @@
 // Sync tournament data with Football Data.org API for real-time updates
 
 import { FootballDataMatch } from './football-data-api';
-import { R32_MATCHES } from './tournament-data';
+import { R32_MATCHES, R16_MATCHES, R16Match } from './tournament-data';
 import { TEAMS, getTeamByName } from './tournament-data';
 
 export interface GoalEvent {
@@ -148,19 +148,122 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
   };
 }
 
+// Sync R16 match with Football Data API
+export function syncR16MatchWithFootballData(match: R16Match, footballMatches: FootballDataMatch[]): TournamentMatch {
+  // If match is already completed in static data, trust our static data
+  if (match.status === 'completed' && match.winner) {
+    return {
+      id: match.id,
+      homeTeamId: match.homeTeamId,
+      awayTeamId: match.awayTeamId,
+      date: match.date,
+      venue: match.venue,
+      homeScore: match.homeScore,
+      awayScore: match.awayScore,
+      winner: match.winner,
+      status: match.status,
+      pens: match.pens,
+    };
+  }
+
+  // Find matching Football Data match by team names
+  const homeTeam = TEAMS.find(t => t.id === match.homeTeamId);
+  const awayTeam = TEAMS.find(t => t.id === match.awayTeamId);
+  
+  if (!homeTeam || !awayTeam) {
+    return {
+      id: match.id,
+      homeTeamId: match.homeTeamId,
+      awayTeamId: match.awayTeamId,
+      date: match.date,
+      venue: match.venue,
+      status: match.status,
+    };
+  }
+
+  const footballMatch = footballMatches.find(fm => {
+    const fmHomeId = getTeamByName(fm.homeTeam.name)?.id;
+    const fmAwayId = getTeamByName(fm.awayTeam.name)?.id;
+    return (
+      (fmHomeId === homeTeam.id && fmAwayId === awayTeam.id) ||
+      (fmHomeId === awayTeam.id && fmAwayId === homeTeam.id)
+    );
+  });
+
+  if (!footballMatch) {
+    return {
+      id: match.id,
+      homeTeamId: match.homeTeamId,
+      awayTeamId: match.awayTeamId,
+      date: match.date,
+      venue: match.venue,
+      status: match.status,
+    };
+  }
+
+  // Check if teams are flipped in the API response
+  const teamsFlipped = getTeamByName(footballMatch.homeTeam.name)?.id !== homeTeam.id;
+
+  // Get actual on-field score
+  const actualScore = getActualScore(footballMatch);
+  const homeScore = teamsFlipped ? actualScore.away : actualScore.home;
+  const awayScore = teamsFlipped ? actualScore.home : actualScore.away;
+
+  // Determine match status
+  const isCompleted = footballMatch.status === 'FINISHED';
+  const isLive = footballMatch.status === 'LIVE' || footballMatch.status === 'IN_PLAY' || footballMatch.status === 'PAUSED';
+
+  // Determine winner
+  let winner: string | undefined;
+  if (isCompleted) {
+    if (footballMatch.score.winner === 'HOME_TEAM') {
+      winner = teamsFlipped ? match.awayTeamId : match.homeTeamId;
+    } else if (footballMatch.score.winner === 'AWAY_TEAM') {
+      winner = teamsFlipped ? match.homeTeamId : match.awayTeamId;
+    } else if (footballMatch.score.winner === null && footballMatch.score.penalties) {
+      winner = getWinnerFromPenalties(footballMatch, 
+        teamsFlipped ? match.awayTeamId : match.homeTeamId,
+        teamsFlipped ? match.homeTeamId : match.awayTeamId
+      );
+    }
+  }
+
+  // Handle penalties display
+  let pens: string | undefined;
+  if (footballMatch.score.penalties?.home != null && footballMatch.score.penalties?.away != null) {
+    const homePenalties = teamsFlipped ? footballMatch.score.penalties.away : footballMatch.score.penalties.home;
+    const awayPenalties = teamsFlipped ? footballMatch.score.penalties.home : footballMatch.score.penalties.away;
+    pens = `${homePenalties}-${awayPenalties}`;
+  }
+
+  return {
+    id: match.id,
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+    date: match.date,
+    venue: match.venue,
+    homeScore: homeScore ?? match.homeScore,
+    awayScore: awayScore ?? match.awayScore,
+    winner: winner ?? match.winner,
+    status: isCompleted ? 'completed' : isLive ? 'live' : 'upcoming',
+    pens: pens ?? match.pens,
+  };
+}
+
 // Sync all tournament rounds with Football Data
 export function syncTournamentWithFootballData(footballMatches: FootballDataMatch[]) {
-  // Get all matches from API and convert them to our format
-  const allApiMatches = footballMatches.map(convertFootballDataToTournamentMatch).filter((match): match is TournamentMatch => match !== null);
-  
   // Sync R32 matches with our static data
   const syncedR32 = R32_MATCHES.map(match => syncMatchWithFootballData(match, footballMatches));
   
+  // Sync R16 matches with our static data
+  const syncedR16 = R16_MATCHES.map(match => syncR16MatchWithFootballData(match, footballMatches));
+  
   // Combine all matches
-  const allMatches = [...syncedR32, ...allApiMatches.filter(m => !m.id.startsWith('r32_'))];
+  const allMatches = [...syncedR32, ...syncedR16];
   
   return {
     r32: syncedR32,
+    r16: syncedR16,
     all: allMatches,
   };
 }
