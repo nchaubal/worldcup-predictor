@@ -6,7 +6,8 @@ import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 import { TEAMS, Team, R32_MATCHES } from "@/lib/tournament-data";
 import { syncTournamentWithFootballData } from "@/lib/football-data-sync";
 import { useFootballData } from "@/hooks/useFootballData";
-import { GitBranch, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo, Edit3, X, RefreshCw } from "lucide-react";
+import { PredictionModal } from "@/components/PredictionModal";
+import { GitBranch, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo, Edit3, RefreshCw } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -64,30 +65,19 @@ function Slot({ team, picked, lost, score }: {
 // ─────────────────────────────────────────────────────────────────────────────
 // MatchCard
 // ─────────────────────────────────────────────────────────────────────────────
-function MatchCard({ teamA, teamB, winnerId, scoreA, scoreB, pens, status, onScorePick, venue, predictedScoreA, predictedScoreB }: {
+function MatchCard({ teamA, teamB, winnerId, scoreA, scoreB, pens, status, onOpenPredict, venue, predictedScoreA, predictedScoreB }: {
   teamA: Team | null; teamB: Team | null;
   winnerId?: string | null; scoreA?: number; scoreB?: number;
   pens?: string; status?: "completed" | "live" | "upcoming";
-  onScorePick?: (teamId: string, homeScore: number, awayScore: number) => void;
+  onOpenPredict?: () => void;
   venue?: string;
   predictedScoreA?: number; predictedScoreB?: number;
 }) {
-  const [scoreOpen, setScoreOpen] = useState(false);
-  const [tempScoreA, setTempScoreA] = useState(predictedScoreA ?? 0);
-  const [tempScoreB, setTempScoreB] = useState(predictedScoreB ?? 0);
-  
   const isResult = status === "completed";
   const isLive   = status === "live";
   const wonA = winnerId === teamA?.id;
   const wonB = winnerId === teamB?.id;
   const hasPredictedScore = predictedScoreA !== undefined && predictedScoreB !== undefined;
-
-  const handleScoreSubmit = () => {
-    if (!teamA || !teamB) return;
-    const winner = tempScoreA > tempScoreB ? teamA.id : tempScoreB > tempScoreA ? teamB.id : teamA.id; // Default to teamA on draw
-    onScorePick?.(winner, tempScoreA, tempScoreB);
-    setScoreOpen(false);
-  };
 
   return (
     <div
@@ -119,10 +109,10 @@ function MatchCard({ teamA, teamB, winnerId, scoreA, scoreB, pens, status, onSco
             )}
           </div>
         )}
-        {/* Teams - clicking opens score picker instead of directly selecting winner */}
+        {/* Teams - clicking opens prediction modal */}
         <div 
           className={`divide-y divide-border/25 ${!isResult && !isLive && teamA && teamB ? 'cursor-pointer' : ''}`}
-          onClick={!isResult && !isLive && teamA && teamB ? () => { setScoreOpen(true); setTempScoreA(predictedScoreA ?? 0); setTempScoreB(predictedScoreB ?? 0); } : undefined}
+          onClick={!isResult && !isLive && teamA && teamB ? onOpenPredict : undefined}
         >
           <Slot team={teamA} picked={wonA} lost={isResult && !wonA && !!teamA}
             score={scoreA} />
@@ -132,68 +122,13 @@ function MatchCard({ teamA, teamB, winnerId, scoreA, scoreB, pens, status, onSco
         {/* Action buttons */}
         {!isResult && !isLive && teamA && teamB && (
           <div className="flex border-t border-border/20">
-            <button onClick={() => { setScoreOpen(v => !v); setTempScoreA(predictedScoreA ?? 0); setTempScoreB(predictedScoreB ?? 0); }}
+            <button onClick={onOpenPredict}
               className="flex-1 flex items-center justify-center gap-1 py-1 text-[10px] text-emerald-500/70 hover:text-emerald-500 transition-colors">
               <Edit3 className="h-2.5 w-2.5" /> Predict
             </button>
           </div>
         )}
       </div>
-      {/* Score prediction popover */}
-      {scoreOpen && teamA && teamB && (
-        <>
-          {/* Backdrop to close on click outside */}
-          <div className="fixed inset-0 z-40" onClick={() => setScoreOpen(false)} />
-          <div 
-            className="absolute left-full top-0 ml-2 z-50 w-44 rounded-xl border border-emerald-500/25 bg-card p-3 shadow-2xl text-xs space-y-2"
-            onKeyDown={(e) => e.key === 'Escape' && setScoreOpen(false)}
-          >
-            <div className="flex items-center justify-between">
-              <div className="font-bold text-emerald-500 flex items-center gap-1"><Edit3 className="h-3 w-3" /> Predict Score</div>
-              <button 
-                onClick={() => setScoreOpen(false)} 
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Close"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{teamA.flag}</span>
-                <span className="flex-1 truncate text-xs">{teamA.name}</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="20"
-                  value={tempScoreA}
-                  onChange={(e) => setTempScoreA(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
-                  className="w-10 h-6 text-center text-sm font-bold rounded border border-border bg-background"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{teamB.flag}</span>
-                <span className="flex-1 truncate text-xs">{teamB.name}</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="20"
-                  value={tempScoreB}
-                  onChange={(e) => setTempScoreB(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
-                  className="w-10 h-6 text-center text-sm font-bold rounded border border-border bg-background"
-                />
-              </div>
-            </div>
-            <button
-              onClick={handleScoreSubmit}
-              className="w-full py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition-colors"
-            >
-              Save Prediction
-            </button>
-            <p className="text-muted-foreground text-[10px] text-center">+5 pts for exact score!</p>
-          </div>
-        </>
-      )}
     </div>
   );
 }
@@ -260,29 +195,32 @@ function FinalConnector() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Column — a list of match cards, vertically spaced
 // ─────────────────────────────────────────────────────────────────────────────
-function Col({ matches, picks, scores, onScorePick }: {
+function Col({ matches, picks, scores, onOpenPredict }: {
   matches: MatchDef[]; picks: Record<string, string>;
   scores: Record<string, { home: number; away: number }>;
-  onScorePick: (id: string, tid: string, homeScore: number, awayScore: number) => void;
+  onOpenPredict: (matchId: string, teamA: Team, teamB: Team) => void;
 }) {
   const getT = (id: string | null | undefined): Team | null =>
     id ? (TEAMS.find(t => t.id === id) ?? null) : null;
   return (
     <div className="flex flex-col justify-around flex-1 gap-3 shrink-0" style={{ width: CW }}>
-      {matches.map(m => (
-        <MatchCard
-          key={m.id}
-          teamA={getT(m.teamAId)}
-          teamB={getT(m.teamBId)}
-          winnerId={m.winnerId ?? picks[m.id] ?? null}
-          scoreA={m.scoreA} scoreB={m.scoreB} pens={m.pens}
-          status={m.status} venue={m.venue}
-          onScorePick={(tid, homeScore, awayScore) => onScorePick(m.id, tid, homeScore, awayScore)}
-          predictedScoreA={scores[m.id]?.home}
-          predictedScoreB={scores[m.id]?.away}
-          
-        />
-      ))}
+      {matches.map(m => {
+        const teamA = getT(m.teamAId);
+        const teamB = getT(m.teamBId);
+        return (
+          <MatchCard
+            key={m.id}
+            teamA={teamA}
+            teamB={teamB}
+            winnerId={m.winnerId ?? picks[m.id] ?? null}
+            scoreA={m.scoreA} scoreB={m.scoreB} pens={m.pens}
+            status={m.status} venue={m.venue}
+            onOpenPredict={teamA && teamB ? () => onOpenPredict(m.id, teamA, teamB) : undefined}
+            predictedScoreA={scores[m.id]?.home}
+            predictedScoreB={scores[m.id]?.away}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -334,6 +272,15 @@ export default function BracketPage() {
   const [bracketH, setBracketH]     = useState(0);
   const outerRef   = useRef<HTMLDivElement>(null);
   const bracketRef = useRef<HTMLDivElement>(null);
+  
+  // Modal state for predictions
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<{
+    id: string;
+    homeTeam: Team;
+    awayTeam: Team;
+    venue?: string;
+  } | null>(null);
 
   const BRACKET_W = CW * 9 + GAP * 8;
   const MIN_SCALE = 0.55; // Don't scale below this - use scrolling instead
@@ -359,11 +306,40 @@ export default function BracketPage() {
     };
   }, [BRACKET_W]);
 
-  const handleScorePick = (id: string, tid: string, homeScore: number, awayScore: number) => {
+  // Open prediction modal for a match
+  const handleOpenPredict = (matchId: string, teamA: Team, teamB: Team, venue?: string) => {
+    setSelectedMatch({ id: matchId, homeTeam: teamA, awayTeam: teamB, venue });
+    setModalOpen(true);
+  };
+
+  // Handle prediction submission from modal
+  const handlePredictionSubmit = (prediction: {
+    homeScore: number;
+    awayScore: number;
+    etResult: string;
+    penaltyWinner: string;
+  }) => {
+    if (!selectedMatch) return;
+    
+    const { id, homeTeam, awayTeam } = selectedMatch;
+    const { homeScore, awayScore, penaltyWinner } = prediction;
+    
+    // Determine winner based on prediction
+    let winner: string;
+    if (homeScore > awayScore) {
+      winner = homeTeam.id;
+    } else if (awayScore > homeScore) {
+      winner = awayTeam.id;
+    } else {
+      // Draw - use penalty winner
+      winner = penaltyWinner;
+    }
+    
     setHistory(prev => [...prev, picks]);
-    setPicks(prev => ({ ...prev, [id]: tid }));
+    setPicks(prev => ({ ...prev, [id]: winner }));
     setScores(prev => ({ ...prev, [id]: { home: homeScore, away: awayScore } }));
-    setKnockoutPrediction(id, tid, homeScore, awayScore);
+    setKnockoutPrediction(id, winner, homeScore, awayScore);
+    setModalOpen(false);
   };
 
   const handleUndo = () => {
@@ -631,45 +607,55 @@ export default function BracketPage() {
           <div className="flex items-stretch" style={{ width: BRACKET_W }}>
 
             {/* Left R32 */}
-            <Col matches={leftR32} picks={picks} scores={scores} onScorePick={handleScorePick} />
+            <Col matches={leftR32} picks={picks} scores={scores} onOpenPredict={handleOpenPredict} />
             <Connector pairs={4} />
 
             {/* Left R16 */}
-            <Col matches={leftR16} picks={picks} scores={scores} onScorePick={handleScorePick} />
+            <Col matches={leftR16} picks={picks} scores={scores} onOpenPredict={handleOpenPredict} />
             <Connector pairs={2} />
 
             {/* Left QF */}
-            <Col matches={leftQF} picks={picks} scores={scores} onScorePick={handleScorePick} />
+            <Col matches={leftQF} picks={picks} scores={scores} onOpenPredict={handleOpenPredict} />
             {/* QF→SF connector: 2 QF matches merge into 1 SF */}
             <SFConnector flip={false} />
 
             {/* Left SF */}
             <div className="flex flex-col justify-center shrink-0" style={{ width: CW }}>
-              <MatchCard
-                teamA={TEAMS.find(t => t.id === sf[0].teamAId) ?? null}
-                teamB={TEAMS.find(t => t.id === sf[0].teamBId) ?? null}
-                winnerId={sf[0].winnerId ?? picks["sf_1"] ?? null}
-                onScorePick={(tid, homeScore, awayScore) => handleScorePick("sf_1", tid, homeScore, awayScore)}
-                predictedScoreA={scores["sf_1"]?.home}
-                predictedScoreB={scores["sf_1"]?.away}
-               
-              />
+              {(() => {
+                const teamA = TEAMS.find(t => t.id === sf[0].teamAId) ?? null;
+                const teamB = TEAMS.find(t => t.id === sf[0].teamBId) ?? null;
+                return (
+                  <MatchCard
+                    teamA={teamA}
+                    teamB={teamB}
+                    winnerId={sf[0].winnerId ?? picks["sf_1"] ?? null}
+                    onOpenPredict={teamA && teamB ? () => handleOpenPredict("sf_1", teamA, teamB) : undefined}
+                    predictedScoreA={scores["sf_1"]?.home}
+                    predictedScoreB={scores["sf_1"]?.away}
+                  />
+                );
+              })()}
             </div>
             {/* SF→Final connector */}
             <FinalConnector />
 
             {/* Final + champion */}
             <div className="flex flex-col items-center justify-center shrink-0" style={{ width: CW }}>
-              <MatchCard
-                teamA={TEAMS.find(t => t.id === finalMatch.teamAId) ?? null}
-                teamB={TEAMS.find(t => t.id === finalMatch.teamBId) ?? null}
-                winnerId={finalMatch.winnerId}
-                venue="MetLife"
-                onScorePick={(tid, homeScore, awayScore) => handleScorePick("final", tid, homeScore, awayScore)}
-                predictedScoreA={scores["final"]?.home}
-                predictedScoreB={scores["final"]?.away}
-               
-              />
+              {(() => {
+                const teamA = TEAMS.find(t => t.id === finalMatch.teamAId) ?? null;
+                const teamB = TEAMS.find(t => t.id === finalMatch.teamBId) ?? null;
+                return (
+                  <MatchCard
+                    teamA={teamA}
+                    teamB={teamB}
+                    winnerId={finalMatch.winnerId}
+                    venue="MetLife"
+                    onOpenPredict={teamA && teamB ? () => handleOpenPredict("final", teamA, teamB, "MetLife") : undefined}
+                    predictedScoreA={scores["final"]?.home}
+                    predictedScoreB={scores["final"]?.away}
+                  />
+                );
+              })()}
               {champion && (
                 <div className="mt-3 text-center">
                   <div className="text-2xl">{champion.flag}</div>
@@ -683,30 +669,54 @@ export default function BracketPage() {
             <FinalConnector />
             {/* Right SF */}
             <div className="flex flex-col justify-center shrink-0" style={{ width: CW }}>
-              <MatchCard
-                teamA={TEAMS.find(t => t.id === sf[1].teamAId) ?? null}
-                teamB={TEAMS.find(t => t.id === sf[1].teamBId) ?? null}
-                winnerId={sf[1].winnerId ?? picks["sf_2"] ?? null}
-                onScorePick={(tid, homeScore, awayScore) => handleScorePick("sf_2", tid, homeScore, awayScore)}
-                predictedScoreA={scores["sf_2"]?.home}
-                predictedScoreB={scores["sf_2"]?.away}
-               
-              />
+              {(() => {
+                const teamA = TEAMS.find(t => t.id === sf[1].teamAId) ?? null;
+                const teamB = TEAMS.find(t => t.id === sf[1].teamBId) ?? null;
+                return (
+                  <MatchCard
+                    teamA={teamA}
+                    teamB={teamB}
+                    winnerId={sf[1].winnerId ?? picks["sf_2"] ?? null}
+                    onOpenPredict={teamA && teamB ? () => handleOpenPredict("sf_2", teamA, teamB) : undefined}
+                    predictedScoreA={scores["sf_2"]?.home}
+                    predictedScoreB={scores["sf_2"]?.away}
+                  />
+                );
+              })()}
             </div>
             <SFConnector flip />
 
-            <Col matches={rightQF} picks={picks} scores={scores} onScorePick={handleScorePick} />
+            <Col matches={rightQF} picks={picks} scores={scores} onOpenPredict={handleOpenPredict} />
             <Connector pairs={2} flip />
 
-            <Col matches={rightR16} picks={picks} scores={scores} onScorePick={handleScorePick} />
+            <Col matches={rightR16} picks={picks} scores={scores} onOpenPredict={handleOpenPredict} />
             <Connector pairs={4} flip />
 
-            <Col matches={rightR32} picks={picks} scores={scores} onScorePick={handleScorePick} />
+            <Col matches={rightR32} picks={picks} scores={scores} onOpenPredict={handleOpenPredict} />
 
           </div>
         </div>
         </div>
       </div>
+      
+      {/* Prediction Modal */}
+      {selectedMatch && (
+        <PredictionModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSubmit={handlePredictionSubmit}
+          homeTeam={selectedMatch.homeTeam}
+          awayTeam={selectedMatch.awayTeam}
+          matchDate={selectedMatch.venue || "Knockout Stage"}
+          matchVenue={selectedMatch.venue}
+          existingPrediction={
+            scores[selectedMatch.id] ? {
+              homeScore: scores[selectedMatch.id].home,
+              awayScore: scores[selectedMatch.id].away,
+            } : null
+          }
+        />
+      )}
     </div>
   );
 }
