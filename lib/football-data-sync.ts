@@ -150,23 +150,7 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
 
 // Sync R16 match with Football Data API
 export function syncR16MatchWithFootballData(match: R16Match, footballMatches: FootballDataMatch[]): TournamentMatch {
-  // If match is already completed in static data, trust our static data
-  if (match.status === 'completed' && match.winner) {
-    return {
-      id: match.id,
-      homeTeamId: match.homeTeamId,
-      awayTeamId: match.awayTeamId,
-      date: match.date,
-      venue: match.venue,
-      homeScore: match.homeScore,
-      awayScore: match.awayScore,
-      winner: match.winner,
-      status: match.status,
-      pens: match.pens,
-    };
-  }
-
-  // Find matching Football Data match by team names
+  // Always try to get data from API first - find matching Football Data match by team names
   const homeTeam = TEAMS.find(t => t.id === match.homeTeamId);
   const awayTeam = TEAMS.find(t => t.id === match.awayTeamId);
   
