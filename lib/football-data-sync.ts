@@ -25,6 +25,7 @@ export interface TournamentMatch {
   homeTeamId: string;
   awayTeamId: string;
   date: string;
+  utcDate?: string;  // ISO date string for precise time checks
   venue: string;
   homeScore?: number;
   awayScore?: number;
@@ -34,6 +35,26 @@ export interface TournamentMatch {
   goals?: GoalEvent[];
   cards?: CardEvent[];
   elapsedTime?: string;
+}
+
+// Check if predictions are locked (5 minutes before kickoff)
+export function isPredictionLocked(match: TournamentMatch): boolean {
+  // Already completed or live - locked
+  if (match.status === 'completed' || match.status === 'live') {
+    return true;
+  }
+  
+  // If no UTC date, can't determine - allow prediction
+  if (!match.utcDate) {
+    return false;
+  }
+  
+  const kickoffTime = new Date(match.utcDate).getTime();
+  const now = Date.now();
+  const fiveMinutesInMs = 5 * 60 * 1000;
+  
+  // Lock if current time is within 5 minutes of kickoff or past kickoff
+  return now >= kickoffTime - fiveMinutesInMs;
 }
 
 // Get the actual on-field score (the final score at end of play)
@@ -140,6 +161,7 @@ export function syncMatchWithFootballData(match: TournamentMatch, footballMatche
 
   return {
     ...match,
+    utcDate: footballMatch.utcDate,
     homeScore: homeScore ?? match.homeScore,
     awayScore: awayScore ?? match.awayScore,
     winner: winner ?? match.winner,
@@ -225,6 +247,7 @@ export function syncR16MatchWithFootballData(match: R16Match, footballMatches: F
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
     date: match.date,
+    utcDate: footballMatch.utcDate,
     venue: match.venue,
     homeScore: homeScore ?? match.homeScore,
     awayScore: awayScore ?? match.awayScore,

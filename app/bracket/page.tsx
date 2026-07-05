@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 import { TEAMS, Team, R32_MATCHES } from "@/lib/tournament-data";
-import { syncTournamentWithFootballData } from "@/lib/football-data-sync";
+import { syncTournamentWithFootballData, isPredictionLocked, TournamentMatch } from "@/lib/football-data-sync";
 import { useFootballData } from "@/hooks/useFootballData";
 import { PredictionModal } from "@/components/PredictionModal";
 import { GitBranch, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo, Edit3, RefreshCw } from "lucide-react";
@@ -28,6 +28,7 @@ type MatchDef = {
   pens?: string;
   status?: "completed" | "live" | "upcoming";
   venue?: string;
+  utcDate?: string;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,19 +66,21 @@ function Slot({ team, picked, lost, score }: {
 // ─────────────────────────────────────────────────────────────────────────────
 // MatchCard
 // ─────────────────────────────────────────────────────────────────────────────
-function MatchCard({ teamA, teamB, winnerId, scoreA, scoreB, pens, status, onOpenPredict, venue, predictedScoreA, predictedScoreB }: {
+function MatchCard({ teamA, teamB, winnerId, scoreA, scoreB, pens, status, onOpenPredict, venue, predictedScoreA, predictedScoreB, isLocked }: {
   teamA: Team | null; teamB: Team | null;
   winnerId?: string | null; scoreA?: number; scoreB?: number;
   pens?: string; status?: "completed" | "live" | "upcoming";
   onOpenPredict?: () => void;
   venue?: string;
   predictedScoreA?: number; predictedScoreB?: number;
+  isLocked?: boolean;
 }) {
   const isResult = status === "completed";
   const isLive   = status === "live";
   const wonA = winnerId === teamA?.id;
   const wonB = winnerId === teamB?.id;
   const hasPredictedScore = predictedScoreA !== undefined && predictedScoreB !== undefined;
+  const canPredict = !isResult && !isLive && !isLocked && teamA && teamB;
 
   return (
     <div
@@ -88,6 +91,7 @@ function MatchCard({ teamA, teamB, winnerId, scoreA, scoreB, pens, status, onOpe
         "rounded-lg border overflow-hidden bg-card transition-all duration-150",
         isLive   ? "border-red-500/60 shadow-[0_0_10px_rgba(239,68,68,0.2)]"
           : isResult ? "border-border/30 opacity-75"
+          : isLocked ? "border-amber-500/30 opacity-80"
           : winnerId  ? "border-primary/50 shadow-[0_0_8px_rgba(180,140,60,0.18)]"
           : "border-border/50 group-hover:border-primary/50",
       ].join(" ")}>
@@ -100,6 +104,14 @@ function MatchCard({ teamA, teamB, winnerId, scoreA, scoreB, pens, status, onOpe
             <span>{isLive ? "LIVE" : "FT"}</span>
             {pens && <span className="ml-auto font-normal">({pens}p)</span>}
           </div>
+        ) : isLocked ? (
+          <div className="flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-400">
+            <Clock className="h-2.5 w-2.5" />
+            <span>LOCKED</span>
+            {hasPredictedScore && (
+              <span className="ml-auto font-normal">{predictedScoreA}-{predictedScoreB}</span>
+            )}
+          </div>
         ) : (
           <div className="flex items-center gap-1 px-2.5 py-0.5 text-[10px] text-muted-foreground border-b border-border/20">
             <Clock className="h-2.5 w-2.5 shrink-0" />
@@ -111,8 +123,8 @@ function MatchCard({ teamA, teamB, winnerId, scoreA, scoreB, pens, status, onOpe
         )}
         {/* Teams - clicking opens prediction modal */}
         <div 
-          className={`divide-y divide-border/25 ${!isResult && !isLive && teamA && teamB ? 'cursor-pointer' : ''}`}
-          onClick={!isResult && !isLive && teamA && teamB ? onOpenPredict : undefined}
+          className={`divide-y divide-border/25 ${canPredict ? 'cursor-pointer' : ''}`}
+          onClick={canPredict ? onOpenPredict : undefined}
         >
           <Slot team={teamA} picked={wonA} lost={isResult && !wonA && !!teamA}
             score={scoreA} />
@@ -120,7 +132,7 @@ function MatchCard({ teamA, teamB, winnerId, scoreA, scoreB, pens, status, onOpe
             score={scoreB} />
         </div>
         {/* Action buttons */}
-        {!isResult && !isLive && teamA && teamB && (
+        {canPredict && (
           <div className="flex border-t border-border/20">
             <button onClick={onOpenPredict}
               className="flex-1 flex items-center justify-center gap-1 py-1 text-[10px] text-emerald-500/70 hover:text-emerald-500 transition-colors">
@@ -207,6 +219,17 @@ function Col({ matches, picks, scores, onOpenPredict }: {
       {matches.map(m => {
         const teamA = getT(m.teamAId);
         const teamB = getT(m.teamBId);
+        // Check if prediction is locked (5 min before kickoff)
+        const matchForLock: TournamentMatch = {
+          id: m.id,
+          homeTeamId: m.teamAId || '',
+          awayTeamId: m.teamBId || '',
+          date: '',
+          venue: m.venue || '',
+          status: m.status || 'upcoming',
+          utcDate: m.utcDate,
+        };
+        const isLocked = isPredictionLocked(matchForLock);
         return (
           <MatchCard
             key={m.id}
@@ -218,6 +241,7 @@ function Col({ matches, picks, scores, onOpenPredict }: {
             onOpenPredict={teamA && teamB ? () => onOpenPredict(m.id, teamA, teamB) : undefined}
             predictedScoreA={scores[m.id]?.home}
             predictedScoreB={scores[m.id]?.away}
+            isLocked={isLocked}
           />
         );
       })}
@@ -394,7 +418,8 @@ export default function BracketPage() {
       scoreB: syncedMatch.awayScore,
       pens: syncedMatch.pens, 
       status: syncedMatch.status, 
-      venue: syncedMatch.venue 
+      venue: syncedMatch.venue,
+      utcDate: syncedMatch.utcDate,
     };
   };
 
@@ -442,6 +467,7 @@ export default function BracketPage() {
       pens: syncedMatch?.pens,
       status: syncedMatch?.status,
       venue: syncedMatch?.venue,
+      utcDate: syncedMatch?.utcDate,
     };
   });
 
