@@ -24,6 +24,9 @@ export type Prediction = {
   homeScore: number;
   awayScore: number;
   predictedWinner: string | null;
+  knockoutWinner?: string | null; // DEPRECATED
+  etResult?: string | null; // 'home', 'away', or 'draw' - ET result if 90min is draw
+  penaltyWinner?: string | null; // 'home' or 'away' - penalty winner if ET is draw
 };
 
 export type UserPredictions = {
@@ -300,22 +303,37 @@ export const R32_MATCHES: R32Match[] = [
   { id: "r32_12", homeTeamId: "por", awayTeamId: "cro", date: "Thu Jul 2",  venue: "Toronto",      homeScore: 2, awayScore: 1, winner: "por", status: "completed" },
   { id: "r32_13", homeTeamId: "sui", awayTeamId: "alg", date: "Thu Jul 2",  venue: "Vancouver",    homeScore: 2, awayScore: 0, winner: "sui", status: "completed" },
   { id: "r32_14", homeTeamId: "aus", awayTeamId: "egy", date: "Fri Jul 3",  venue: "Arlington",    homeScore: 1, awayScore: 1, pens: "2-4", winner: "egy", status: "completed" },
-  // Completed today
   { id: "r32_15", homeTeamId: "arg", awayTeamId: "cpv", date: "Fri Jul 3",  venue: "Miami",        homeScore: 3, awayScore: 2, winner: "arg", status: "completed" },
-  // Upcoming
-  { id: "r32_16", homeTeamId: "col", awayTeamId: "gha", date: "Fri Jul 3",  venue: "Kansas City",  status: "upcoming" },
+  { id: "r32_16", homeTeamId: "col", awayTeamId: "gha", date: "Fri Jul 3",  venue: "Kansas City",  homeScore: 3, awayScore: 2, winner: "col", status: "completed" },
 ];
 
-// Round of 16 fixtures (teams TBD based on R32 winners)
-export const R16_MATCHES = [
-  { id: "r16_1", label: "Canada vs Morocco",   date: "Sat Jul 4",  venue: "Houston" },
-  { id: "r16_2", label: "Paraguay vs France",  date: "Sat Jul 4",  venue: "Philadelphia" },
-  { id: "r16_3", label: "Brazil vs Norway",    date: "Sun Jul 5",  venue: "New Jersey" },
-  { id: "r16_4", label: "Mexico/Ecuador vs England/DR Congo", date: "Mon Jul 6", venue: "Mexico City" },
-  { id: "r16_5", label: "Portugal/Croatia vs Spain/Austria",  date: "Mon Jul 6", venue: "Arlington" },
-  { id: "r16_6", label: "USA/Bosnia vs Belgium/Senegal",      date: "Tue Jul 7", venue: "Seattle" },
-  { id: "r16_7", label: "Argentina/Cape Verde vs Australia/Egypt", date: "Tue Jul 7", venue: "Atlanta" },
-  { id: "r16_8", label: "Switzerland/Algeria vs Colombia/Ghana",   date: "Tue Jul 7", venue: "Vancouver" },
+// Round of 16 fixtures - now with actual teams from R32 results
+export type R16Match = {
+  id: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  date: string;
+  venue: string;
+  homeScore?: number;
+  awayScore?: number;
+  pens?: string;
+  winner?: string;
+  status: "completed" | "live" | "upcoming";
+};
+
+export const R16_MATCHES: R16Match[] = [
+  // Today's matches (Jul 4)
+  { id: "r16_1", homeTeamId: "can", awayTeamId: "mar", date: "Sat Jul 4",  venue: "Houston",       status: "upcoming" },
+  { id: "r16_2", homeTeamId: "par", awayTeamId: "fra", date: "Sat Jul 4",  venue: "Philadelphia",  status: "upcoming" },
+  // Tomorrow (Jul 5)
+  { id: "r16_3", homeTeamId: "bra", awayTeamId: "nor", date: "Sun Jul 5",  venue: "New Jersey",    status: "upcoming" },
+  // Jul 6
+  { id: "r16_4", homeTeamId: "mex", awayTeamId: "eng", date: "Mon Jul 6",  venue: "Mexico City",   status: "upcoming" },
+  { id: "r16_5", homeTeamId: "por", awayTeamId: "esp", date: "Mon Jul 6",  venue: "Arlington",     status: "upcoming" },
+  // Jul 7
+  { id: "r16_6", homeTeamId: "usa", awayTeamId: "bel", date: "Tue Jul 7",  venue: "Seattle",       status: "upcoming" },
+  { id: "r16_7", homeTeamId: "arg", awayTeamId: "egy", date: "Tue Jul 7",  venue: "Atlanta",       status: "upcoming" },
+  { id: "r16_8", homeTeamId: "sui", awayTeamId: "col", date: "Tue Jul 7",  venue: "Vancouver",     status: "upcoming" },
 ];
 
 // Legacy flat match list used by predict page (group stage only)

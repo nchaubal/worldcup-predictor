@@ -4,21 +4,21 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Trophy, LayoutGrid, GitBranch, Users, User, BarChart3, Menu, X } from "lucide-react";
+import { Trophy, LayoutGrid, GitBranch, User, Menu, X, Shield } from "lucide-react";
 import { AuthButton } from "./AuthButton";
+import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 
 const NAV_LINKS = [
   { href: "/",        label: "Home",    icon: Trophy },
   { href: "/predict", label: "Predict", icon: LayoutGrid },
   { href: "/bracket", label: "Bracket", icon: GitBranch },
-  { href: "/leagues", label: "Leagues", icon: Users },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isAdmin } = useTournamentSupabase();
 
   // Close the mobile menu whenever the route changes.
   useEffect(() => {
@@ -68,6 +68,19 @@ export default function Navbar() {
                 </Link>
               );
             })}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={`group relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
+                  pathname === "/admin"
+                    ? "text-primary"
+                    : "text-amber-500 hover:text-amber-400 hover:bg-accent"
+                }`}
+              >
+                <Shield className="h-4 w-4 shrink-0" />
+                <span>Admin</span>
+              </Link>
+            )}
             <div className="ml-4 pl-4 border-l border-border">
               <AuthButton />
             </div>

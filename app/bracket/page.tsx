@@ -5,10 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { useTournamentSupabase } from "@/context/TournamentContextSupabase";
 import { TEAMS, Team, R32_MATCHES } from "@/lib/tournament-data";
 import { syncTournamentWithFootballData } from "@/lib/football-data-sync";
-import { predictMatch } from "@/lib/ai-predictor";
 import { useFootballData } from "@/hooks/useFootballData";
-import { GitBranch, Brain, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo, Edit3, X, RefreshCw } from "lucide-react";
-import { MatchBoxScoreDialog, BoxScoreMatch } from "@/components/MatchBoxScoreDialog";
+import { GitBranch, Trophy, CheckCircle2, Clock, Radio, ZoomIn, Undo, Edit3, X, RefreshCw } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -66,23 +64,20 @@ function Slot({ team, picked, lost, score, isResult }: {
 // ─────────────────────────────────────────────────────────────────────────────
 // MatchCard
 // ─────────────────────────────────────────────────────────────────────────────
-function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, status, onScorePick, showAI, venue, predictedScoreA, predictedScoreB, onShowBoxScore }: {
+function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, status, onScorePick, venue, predictedScoreA, predictedScoreB }: {
   matchId: string; teamA: Team | null; teamB: Team | null;
   winnerId?: string | null; scoreA?: number; scoreB?: number;
   pens?: string; status?: "completed" | "live" | "upcoming";
   onScorePick?: (teamId: string, homeScore: number, awayScore: number) => void;
-  showAI?: boolean; venue?: string;
+  venue?: string;
   predictedScoreA?: number; predictedScoreB?: number;
-  onShowBoxScore?: (match: BoxScoreMatch) => void;
 }) {
-  const [aiOpen, setAiOpen] = useState(false);
   const [scoreOpen, setScoreOpen] = useState(false);
   const [tempScoreA, setTempScoreA] = useState(predictedScoreA ?? 0);
   const [tempScoreB, setTempScoreB] = useState(predictedScoreB ?? 0);
   
   const isResult = status === "completed";
   const isLive   = status === "live";
-  const pred     = showAI && teamA && teamB ? predictMatch(teamA, teamB) : null;
   const wonA = winnerId === teamA?.id;
   const wonB = winnerId === teamB?.id;
   const hasPredictedScore = predictedScoreA !== undefined && predictedScoreB !== undefined;
@@ -124,16 +119,10 @@ function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, stat
             )}
           </div>
         )}
-        {/* Teams - pending: opens score picker. Finished: opens the box score. */}
-        <div
-          className={`divide-y divide-border/25 ${(!isResult && !isLive && teamA && teamB) || (isResult && teamA && teamB) ? 'cursor-pointer' : ''}`}
-          onClick={
-            !isResult && !isLive && teamA && teamB
-              ? () => { setScoreOpen(true); setAiOpen(false); setTempScoreA(predictedScoreA ?? 0); setTempScoreB(predictedScoreB ?? 0); }
-              : isResult && teamA && teamB && scoreA !== undefined && scoreB !== undefined
-                ? () => onShowBoxScore?.({ id: matchId, teamA, teamB, scoreA, scoreB, pens, venue })
-                : undefined
-          }
+        {/* Teams - clicking opens score picker instead of directly selecting winner */}
+        <div 
+          className={`divide-y divide-border/25 ${!isResult && !isLive && teamA && teamB ? 'cursor-pointer' : ''}`}
+          onClick={!isResult && !isLive && teamA && teamB ? () => { setScoreOpen(true); setTempScoreA(predictedScoreA ?? 0); setTempScoreB(predictedScoreB ?? 0); } : undefined}
         >
           <Slot team={teamA} picked={wonA} lost={isResult && !wonA && !!teamA}
             score={scoreA} isResult={isResult || isLive} />
@@ -142,14 +131,8 @@ function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, stat
         </div>
         {/* Action buttons */}
         {!isResult && !isLive && teamA && teamB && (
-          <div className="flex border-t border-border/20 divide-x divide-border/20">
-            {pred && (
-              <button onClick={() => { setAiOpen(v => !v); setScoreOpen(false); }}
-                className="flex-1 flex items-center justify-center gap-1 py-1 text-[10px] text-primary/60 hover:text-primary transition-colors">
-                <Brain className="h-2.5 w-2.5" /> AI
-              </button>
-            )}
-            <button onClick={() => { setScoreOpen(v => !v); setAiOpen(false); setTempScoreA(predictedScoreA ?? 0); setTempScoreB(predictedScoreB ?? 0); }}
+          <div className="flex border-t border-border/20">
+            <button onClick={() => { setScoreOpen(v => !v); setTempScoreA(predictedScoreA ?? 0); setTempScoreB(predictedScoreB ?? 0); }}
               className="flex-1 flex items-center justify-center gap-1 py-1 text-[10px] text-emerald-500/70 hover:text-emerald-500 transition-colors">
               <Edit3 className="h-2.5 w-2.5" /> Predict
             </button>
@@ -210,28 +193,6 @@ function MatchCard({ matchId, teamA, teamB, winnerId, scoreA, scoreB, pens, stat
             <p className="text-muted-foreground text-[10px] text-center">+5 pts for exact score!</p>
           </div>
         </>
-      )}
-      {/* AI popover */}
-      {aiOpen && pred && (
-        <div className="absolute left-full top-0 ml-2 z-50 w-48 rounded-xl border border-primary/25 bg-card p-3 shadow-2xl text-xs space-y-2">
-          <div className="font-bold text-primary flex items-center gap-1"><Brain className="h-3 w-3" /> AI Prediction</div>
-          {([
-            { label: teamA?.name, pct: pred.homeWin, cls: "text-primary" },
-            { label: "Draw/ET",   pct: pred.draw,    cls: "text-muted-foreground" },
-            { label: teamB?.name, pct: pred.awayWin, cls: "text-blue-400" },
-          ] as const).map(r => (
-            <div key={r.label} className="flex items-center gap-1">
-              <span className="flex-1 truncate text-foreground/80">{r.label}</span>
-              <span className={`font-black w-8 text-right ${r.cls}`}>{r.pct}%</span>
-            </div>
-          ))}
-          <div className="flex h-1.5 rounded-full overflow-hidden">
-            <div className="bg-primary" style={{ width: `${pred.homeWin}%` }} />
-            <div className="bg-muted"   style={{ width: `${pred.draw}%` }} />
-            <div className="bg-blue-500" style={{ width: `${pred.awayWin}%` }} />
-          </div>
-          <p className="text-muted-foreground italic text-[10px] leading-snug">{pred.insight}</p>
-        </div>
       )}
     </div>
   );
@@ -299,12 +260,10 @@ function FinalConnector({ flip: _flip }: { flip?: boolean }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Column — a list of match cards, vertically spaced
 // ─────────────────────────────────────────────────────────────────────────────
-function Col({ matches, picks, scores, onScorePick, showAI, onShowBoxScore }: {
+function Col({ matches, picks, scores, onScorePick }: {
   matches: MatchDef[]; picks: Record<string, string>;
   scores: Record<string, { home: number; away: number }>;
   onScorePick: (id: string, tid: string, homeScore: number, awayScore: number) => void;
-  showAI?: boolean;
-  onShowBoxScore?: (match: BoxScoreMatch) => void;
 }) {
   const getT = (id: string | null | undefined): Team | null =>
     id ? (TEAMS.find(t => t.id === id) ?? null) : null;
@@ -322,8 +281,7 @@ function Col({ matches, picks, scores, onScorePick, showAI, onShowBoxScore }: {
           onScorePick={(tid, homeScore, awayScore) => onScorePick(m.id, tid, homeScore, awayScore)}
           predictedScoreA={scores[m.id]?.home}
           predictedScoreB={scores[m.id]?.away}
-          showAI={showAI && !m.winnerId}
-          onShowBoxScore={onShowBoxScore}
+          
         />
       ))}
     </div>
@@ -339,7 +297,6 @@ export default function BracketPage() {
   const [picks, setPicks]         = useState<Record<string, string>>({});
   const [scores, setScores]       = useState<Record<string, { home: number; away: number }>>({});
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const [boxScoreMatch, setBoxScoreMatch] = useState<BoxScoreMatch | null>(null);
 
   // Fetch ALL World Cup matches so the bracket syncs across all rounds
   useEffect(() => {
@@ -616,7 +573,6 @@ export default function BracketPage() {
         <span className="flex items-center gap-1"><Radio className="h-3 w-3 text-red-400 animate-pulse" /> Live</span>
         <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Tap to predict</span>
         <span className="hidden sm:flex items-center gap-1"><ZoomIn className="h-3 w-3 text-primary/60" /> Hover to magnify</span>
-        <span className="flex items-center gap-1"><Brain className="h-3 w-3 text-primary/70" /> AI odds on pending</span>
         <span className="flex sm:hidden items-center gap-1 text-primary">← Swipe to scroll →</span>
       </div>
 
@@ -655,15 +611,15 @@ export default function BracketPage() {
           <div className="flex items-stretch" style={{ width: BRACKET_W }}>
 
             {/* Left R32 */}
-            <Col matches={leftR32} picks={picks} scores={scores} onScorePick={handleScorePick} showAI onShowBoxScore={setBoxScoreMatch} />
+            <Col matches={leftR32} picks={picks} scores={scores} onScorePick={handleScorePick} />
             <Connector pairs={4} />
 
             {/* Left R16 */}
-            <Col matches={leftR16} picks={picks} scores={scores} onScorePick={handleScorePick} showAI onShowBoxScore={setBoxScoreMatch} />
+            <Col matches={leftR16} picks={picks} scores={scores} onScorePick={handleScorePick} />
             <Connector pairs={2} />
 
             {/* Left QF */}
-            <Col matches={leftQF} picks={picks} scores={scores} onScorePick={handleScorePick} showAI onShowBoxScore={setBoxScoreMatch} />
+            <Col matches={leftQF} picks={picks} scores={scores} onScorePick={handleScorePick} />
             {/* QF→SF connector: 2 QF matches merge into 1 SF */}
             <SFConnector flip={false} />
 
@@ -677,7 +633,7 @@ export default function BracketPage() {
                 onScorePick={(tid, homeScore, awayScore) => handleScorePick("sf_1", tid, homeScore, awayScore)}
                 predictedScoreA={scores["sf_1"]?.home}
                 predictedScoreB={scores["sf_1"]?.away}
-                showAI
+               
               />
             </div>
             {/* SF→Final connector */}
@@ -694,7 +650,7 @@ export default function BracketPage() {
                 onScorePick={(tid, homeScore, awayScore) => handleScorePick("final", tid, homeScore, awayScore)}
                 predictedScoreA={scores["final"]?.home}
                 predictedScoreB={scores["final"]?.away}
-                showAI
+               
               />
               {champion && (
                 <div className="mt-3 text-center">
@@ -717,24 +673,23 @@ export default function BracketPage() {
                 onScorePick={(tid, homeScore, awayScore) => handleScorePick("sf_2", tid, homeScore, awayScore)}
                 predictedScoreA={scores["sf_2"]?.home}
                 predictedScoreB={scores["sf_2"]?.away}
-                showAI
+               
               />
             </div>
             <SFConnector flip />
 
-            <Col matches={rightQF} picks={picks} scores={scores} onScorePick={handleScorePick} showAI onShowBoxScore={setBoxScoreMatch} />
+            <Col matches={rightQF} picks={picks} scores={scores} onScorePick={handleScorePick} />
             <Connector pairs={2} flip />
 
-            <Col matches={rightR16} picks={picks} scores={scores} onScorePick={handleScorePick} showAI onShowBoxScore={setBoxScoreMatch} />
+            <Col matches={rightR16} picks={picks} scores={scores} onScorePick={handleScorePick} />
             <Connector pairs={4} flip />
 
-            <Col matches={rightR32} picks={picks} scores={scores} onScorePick={handleScorePick} showAI onShowBoxScore={setBoxScoreMatch} />
+            <Col matches={rightR32} picks={picks} scores={scores} onScorePick={handleScorePick} />
 
           </div>
         </div>
         </div>
       </div>
-      <MatchBoxScoreDialog match={boxScoreMatch} onClose={() => setBoxScoreMatch(null)} />
     </div>
   );
 }

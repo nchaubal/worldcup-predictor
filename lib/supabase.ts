@@ -12,6 +12,11 @@ export interface Profile {
   id: string;
   username: string;
   avatar: string;
+  is_admin?: boolean;
+  total_points?: number;
+  exact_scores?: number;
+  correct_margins?: number;
+  correct_results?: number;
   created_at: string;
   updated_at: string;
 }
@@ -39,6 +44,9 @@ export interface GroupPrediction {
   home_score: number;
   away_score: number;
   predicted_winner: string;
+  knockout_winner?: string | null; // DEPRECATED
+  et_result?: string | null; // 'home', 'away', or 'draw' - required if 90min is draw
+  penalty_winner?: string | null; // 'home' or 'away' - required if ET is draw
   created_at: string;
   updated_at: string;
 }
@@ -310,23 +318,63 @@ export class SupabaseService {
     matchId: string, 
     homeScore: number, 
     awayScore: number, 
-    predictedWinner: string
-  ): Promise<GroupPrediction> {
+    predictedWinner: string,
+    etResult?: string | null, // 'home', 'away', or 'draw' - required if 90min is draw
+    penaltyWinner?: string | null // 'home' or 'away' - required if ET is draw
+  ): Promise<GroupPrediction | null> {
     this.checkSupabase();
-    const { data, error } = await supabase!
+
+    // Check if prediction exists
+    const { data: existing } = await supabase!
       .from('group_predictions')
-      .upsert({
-        user_id: userId,
-        match_id: matchId,
-        home_score: homeScore,
-        away_score: awayScore,
-        predicted_winner: predictedWinner
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+      .select('id')
+      .eq('user_id', userId)
+      .eq('match_id', matchId)
+      .maybeSingle();
+
+    if (existing) {
+      // Update existing prediction
+      const { data, error, status, statusText } = await supabase!
+        .from('group_predictions')
+        .update({
+          home_score: homeScore,
+          away_score: awayScore,
+          predicted_winner: predictedWinner,
+          et_result: etResult || null,
+          penalty_winner: penaltyWinner || null
+        })
+        .eq('user_id', userId)
+        .eq('match_id', matchId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating prediction:', { error, status, statusText, code: error.code, message: error.message, details: error.details });
+        throw error;
+      }
+      return data;
+    } else {
+      // Insert new prediction
+      const { data, error, status, statusText } = await supabase!
+        .from('group_predictions')
+        .insert({
+          user_id: userId,
+          match_id: matchId,
+          home_score: homeScore,
+          away_score: awayScore,
+          predicted_winner: predictedWinner,
+          et_result: etResult || null,
+          penalty_winner: penaltyWinner || null
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error inserting prediction:', { error, status, statusText, code: error.code, message: error.message, details: error.details });
+        throw error;
+      }
+      return data;
+    }
   }
 
   static async getKnockoutPredictions(userId: string): Promise<KnockoutPrediction[]> {
@@ -471,64 +519,208 @@ export class SupabaseService {
     return supabase!.auth.onAuthStateChange(callback);
   }
 
-  // Prediction predictions operations
-  static async getPredictionPredictions(predictorUserId: string): Promise<PredictionPrediction[]> {
+  // Email allowlist operations
+  static async isEmailAllowed(email: string): Promise<boolean> {
     this.checkSupabase();
-    const { data, error } = await supabase!
-      .from('prediction_predictions')
-      .select('*')
-      .eq('predictor_user_id', predictorUserId);
     
-    if (error) throw error;
-    return data || [];
+    // First check if the allowed_emails table exists
+    const { data, error } = await supabase!
+      .from('allowed_emails')
+      .select('email')
+      .eq('email', email.toLowerCase())
+      .single();
+    
+    // If table doesn't exist (42P01) or any other error, allow all emails for now
+    // This makes the allowlist optional until it's set up
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows found - email not in allowlist
+        // For now, return true to allow all emails until allowlist is configured
+        console.log('Email not in allowlist, but allowing for now:', email);
+        return true;
+      }
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        // Table doesn't exist - allow all emails
+        console.log('allowed_emails table not found, allowing all emails');
+        return true;
+      }
+      // For any other error, log and allow (fail open for now)
+      console.warn('Error checking allowlist, allowing email:', error);
+      return true;
+    }
+    
+    return !!data;
   }
 
-  static async upsertPredictionPrediction(
-    predictorUserId: string,
-    predictedUserId: string,
+  // Get all profiles for global leaderboard (ordered by points)
+  static async getAllProfiles(): Promise<Profile[]> {
+    this.checkSupabase();
+    
+    // First try with total_points ordering (if column exists)
+    const { data, error } = await supabase!
+      .from('profiles')
+      .select('id, username, avatar, is_admin, total_points, exact_scores, correct_margins, correct_results, created_at, updated_at')
+      .not('username', 'is', null);
+    
+    if (error) {
+      // If error (e.g., column doesn't exist), try basic query
+      console.warn('Error fetching profiles with points, trying basic query:', error.message);
+      const { data: basicData, error: basicError } = await supabase!
+        .from('profiles')
+        .select('id, username, avatar, created_at, updated_at')
+        .not('username', 'is', null);
+      
+      if (basicError) throw basicError;
+      return (basicData || []).map(p => ({ ...p, total_points: 0 })) as Profile[];
+    }
+    
+    // Sort by total_points (handle null values)
+    const sorted = (data || []).sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
+    return sorted as Profile[];
+  }
+
+  // Check if user is admin
+  static async isUserAdmin(userId: string): Promise<boolean> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', userId)
+      .single();
+    
+    if (error) return false;
+    return data?.is_admin === true;
+  }
+
+  // Admin: Add allowed email
+  static async addAllowedEmail(email: string): Promise<void> {
+    this.checkSupabase();
+    const { error } = await supabase!
+      .from('allowed_emails')
+      .insert({ email: email.toLowerCase() });
+    
+    if (error && error.code !== '23505') { // Ignore duplicate key error
+      throw error;
+    }
+  }
+
+  // Admin: Get all allowed emails
+  static async getAllowedEmails(): Promise<string[]> {
+    this.checkSupabase();
+    const { data, error } = await supabase!
+      .from('allowed_emails')
+      .select('email')
+      .order('email');
+    
+    if (error) throw error;
+    return (data || []).map(d => d.email);
+  }
+
+  // Admin: Remove allowed email
+  static async removeAllowedEmail(email: string): Promise<void> {
+    this.checkSupabase();
+    const { error } = await supabase!
+      .from('allowed_emails')
+      .delete()
+      .eq('email', email.toLowerCase());
+    
+    if (error) throw error;
+  }
+
+  // Admin: Add prediction for another user
+  static async adminAddPrediction(
+    adminId: string,
+    targetUserId: string,
+    matchId: string,
+    homeScore: number,
+    awayScore: number,
+    reason?: string
+  ): Promise<void> {
+    this.checkSupabase();
+    
+    // First verify admin status
+    const isAdmin = await this.isUserAdmin(adminId);
+    if (!isAdmin) {
+      throw new Error('Unauthorized: User is not an admin');
+    }
+
+    // Determine predicted winner
+    const predictedWinner = homeScore > awayScore ? 'home' : 
+                           awayScore > homeScore ? 'away' : 'draw';
+
+    // Add/update the prediction
+    const { data: existing } = await supabase!
+      .from('group_predictions')
+      .select('id')
+      .eq('user_id', targetUserId)
+      .eq('match_id', matchId)
+      .single();
+
+    if (existing) {
+      await supabase!
+        .from('group_predictions')
+        .update({
+          home_score: homeScore,
+          away_score: awayScore,
+          predicted_winner: predictedWinner
+        })
+        .eq('user_id', targetUserId)
+        .eq('match_id', matchId);
+    } else {
+      await supabase!
+        .from('group_predictions')
+        .insert({
+          user_id: targetUserId,
+          match_id: matchId,
+          home_score: homeScore,
+          away_score: awayScore,
+          predicted_winner: predictedWinner
+        });
+    }
+
+    // Log the admin action
+    await supabase!
+      .from('admin_prediction_logs')
+      .insert({
+        admin_id: adminId,
+        target_user_id: targetUserId,
+        match_id: matchId,
+        home_score: homeScore,
+        away_score: awayScore,
+        reason: reason || 'Admin override'
+      });
+  }
+
+  // Admin: Add match result (triggers points update via database trigger)
+  static async addMatchResult(
     matchId: string,
     homeScore: number,
     awayScore: number
-  ): Promise<PredictionPrediction> {
-    this.checkSupabase();
-    const { data, error } = await supabase!
-      .from('prediction_predictions')
-      .upsert({
-        predictor_user_id: predictorUserId,
-        predicted_user_id: predictedUserId,
-        match_id: matchId,
-        predicted_home_score: homeScore,
-        predicted_away_score: awayScore
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }
-
-  static async deletePredictionPrediction(
-    predictorUserId: string,
-    predictedUserId: string,
-    matchId: string
   ): Promise<void> {
     this.checkSupabase();
+    
+    const actualWinner = homeScore > awayScore ? 'home' : 
+                        awayScore > homeScore ? 'away' : 'draw';
+
     const { error } = await supabase!
-      .from('prediction_predictions')
-      .delete()
-      .eq('predictor_user_id', predictorUserId)
-      .eq('predicted_user_id', predictedUserId)
-      .eq('match_id', matchId);
+      .from('match_results')
+      .insert({
+        match_id: matchId,
+        home_score: homeScore,
+        away_score: awayScore,
+        actual_winner: actualWinner,
+        completed_at: new Date().toISOString()
+      });
     
     if (error) throw error;
   }
 
-  static async getPredictionsForUser(predictedUserId: string): Promise<PredictionPrediction[]> {
+  // Get all match results
+  static async getMatchResults(): Promise<MatchResult[]> {
     this.checkSupabase();
     const { data, error } = await supabase!
-      .from('prediction_predictions')
-      .select('*')
-      .eq('predicted_user_id', predictedUserId);
+      .from('match_results')
+      .select('*');
     
     if (error) throw error;
     return data || [];
