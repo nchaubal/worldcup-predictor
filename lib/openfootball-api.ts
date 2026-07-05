@@ -109,19 +109,21 @@ function parseMatchDate(dateStr: string): string | null {
     return dateStr;
   }
   
-  // Handle display format like "Sat Jul 5" - convert to 2026-MM-DD
+  // Handle display format like "Sat Jul 5" or "Tue Jun 30" - convert to 2026-MM-DD
   const months: Record<string, string> = {
     'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
     'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
     'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
   };
   
-  const match = dateStr.match(/(\w+)\s+(\d+)/);
-  if (match) {
-    const month = months[match[1]];
-    const day = match[2].padStart(2, '0');
-    if (month) {
-      return `2026-${month}-${day}`;
+  // Try to find month name and day number in the string
+  // Handles: "Jul 5", "Sat Jul 5", "Tue Jun 30", etc.
+  for (const [monthName, monthNum] of Object.entries(months)) {
+    const regex = new RegExp(`${monthName}\\s+(\\d+)`);
+    const match = dateStr.match(regex);
+    if (match) {
+      const day = match[1].padStart(2, '0');
+      return `2026-${monthNum}-${day}`;
     }
   }
   
