@@ -34,10 +34,16 @@ export const useFootballData = () => {
         isFinished: footballDataApi.isMatchFinished(match),
       }));
       
-      setMatches(matchesWithDetails);
+      // Only update state if we got valid data - prevents wiping out good data on API errors
+      if (matchesWithDetails.length > 0) {
+        setMatches(matchesWithDetails);
+      } else {
+        console.warn('API returned empty matches, keeping previous data');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch matches');
       console.error('Error fetching World Cup matches:', err);
+      // Don't clear matches on error - keep the last good data
     } finally {
       setLoading(false);
     }
@@ -57,10 +63,12 @@ export const useFootballData = () => {
         isFinished: footballDataApi.isMatchFinished(match),
       }));
       
+      // Live matches can legitimately be empty (no games currently playing)
       setMatches(matchesWithDetails);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch live matches');
       console.error('Error fetching live matches:', err);
+      // Don't clear matches on error
     } finally {
       setLoading(false);
     }
@@ -110,10 +118,14 @@ export const useFootballData = () => {
         return new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime();
       });
       
-      setMatches(matchesWithDetails);
+      // Only update if we got data
+      if (matchesWithDetails.length > 0) {
+        setMatches(matchesWithDetails);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch matches');
       console.error('Error fetching matches:', err);
+      // Don't clear matches on error
     } finally {
       setLoading(false);
     }
@@ -142,10 +154,12 @@ export const useFootballData = () => {
         // already finished or are currently live.
         .filter(match => !match.isFinished && !match.isLive);
 
+      // Upcoming can legitimately be empty if all matches are done
       setMatches(matchesWithDetails);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch upcoming matches');
       console.error('Error fetching upcoming matches:', err);
+      // Don't clear matches on error
     } finally {
       setLoading(false);
     }
