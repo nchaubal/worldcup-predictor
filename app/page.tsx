@@ -151,7 +151,8 @@ export default function HomePage() {
     const awayWon = m.winner === (m.awayTeamId || awayTeam.id);
     
     // Get match details from OpenFootball API (includes goal scorers)
-    const openFootballDetails = isCompleted ? getOpenFootballDetails(homeTeam.name, awayTeam.name) : null;
+    // Pass date to uniquely identify the match (teams can play multiple times in a tournament)
+    const openFootballDetails = isCompleted ? getOpenFootballDetails(homeTeam.name, awayTeam.name, m.utcDate || m.date) : null;
     // Use OpenFootball goals if available, otherwise fall back to static data
     const goals = openFootballDetails?.goals || m.goals || [];
     const hasGoals = goals.length > 0;

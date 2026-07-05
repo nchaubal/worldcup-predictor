@@ -35,9 +35,9 @@ export function useOpenFootball() {
   }, [fetchData]);
 
   const getDetails = useCallback(
-    (homeTeam: string, awayTeam: string): MatchDetails | null => {
+    (homeTeam: string, awayTeam: string, matchDate?: string): MatchDetails | null => {
       if (!data) return null;
-      return getMatchDetails(data, homeTeam, awayTeam);
+      return getMatchDetails(data, homeTeam, awayTeam, matchDate);
     },
     [data]
   );

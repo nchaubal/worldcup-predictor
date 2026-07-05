@@ -93,23 +93,68 @@ function normalizeTeamName(name: string): string {
   return TEAM_NAME_MAP[name] || name;
 }
 
-// Find a match by team names
+// Parse date string to comparable format (YYYY-MM-DD)
+function parseMatchDate(dateStr: string): string | null {
+  if (!dateStr) return null;
+  
+  // Handle ISO date format (2026-07-05T19:00:00Z)
+  if (dateStr.includes('T')) {
+    return dateStr.split('T')[0];
+  }
+  
+  // Handle OpenFootball format (2026-07-05)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  
+  // Handle display format like "Sat Jul 5" - convert to 2026-MM-DD
+  const months: Record<string, string> = {
+    'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+    'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+    'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+  };
+  
+  const match = dateStr.match(/(\w+)\s+(\d+)/);
+  if (match) {
+    const month = months[match[1]];
+    const day = match[2].padStart(2, '0');
+    if (month) {
+      return `2026-${month}-${day}`;
+    }
+  }
+  
+  return null;
+}
+
+// Find a match by team names and optionally date
 export function findMatch(
   data: OpenFootballData,
   homeTeam: string,
-  awayTeam: string
+  awayTeam: string,
+  matchDate?: string
 ): OpenFootballMatch | undefined {
   const normalizedHome = normalizeTeamName(homeTeam);
   const normalizedAway = normalizeTeamName(awayTeam);
+  const targetDate = matchDate ? parseMatchDate(matchDate) : null;
   
   return data.matches.find(match => {
     const matchHome = normalizeTeamName(match.team1);
     const matchAway = normalizeTeamName(match.team2);
     
-    return (
+    const teamsMatch = (
       (matchHome === normalizedHome && matchAway === normalizedAway) ||
       (matchHome === normalizedAway && matchAway === normalizedHome)
     );
+    
+    if (!teamsMatch) return false;
+    
+    // If date is provided, also match by date
+    if (targetDate) {
+      const openFootballDate = parseMatchDate(match.date);
+      return openFootballDate === targetDate;
+    }
+    
+    return true;
   });
 }
 
@@ -146,9 +191,10 @@ export interface MatchDetails {
 export function getMatchDetails(
   data: OpenFootballData,
   homeTeam: string,
-  awayTeam: string
+  awayTeam: string,
+  matchDate?: string
 ): MatchDetails | null {
-  const match = findMatch(data, homeTeam, awayTeam);
+  const match = findMatch(data, homeTeam, awayTeam, matchDate);
   
   if (!match) {
     return null;
