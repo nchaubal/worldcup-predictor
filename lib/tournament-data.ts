@@ -320,17 +320,92 @@ export type R16Match = {
   status: "completed" | "live" | "upcoming";
 };
 
-// R16 match fixtures - teams derived from R32 winners, scores come from API sync
+// R16 match fixtures - teams derived from R32 winners
 export const R16_MATCHES: R16Match[] = [
-  { id: "r16_1", homeTeamId: "can", awayTeamId: "mar", date: "Sat Jul 5",  venue: "Houston",       status: "upcoming" },
-  { id: "r16_2", homeTeamId: "par", awayTeamId: "fra", date: "Sat Jul 5",  venue: "Philadelphia",  status: "upcoming" },
-  { id: "r16_3", homeTeamId: "bra", awayTeamId: "nor", date: "Sun Jul 5",  venue: "New Jersey",    status: "upcoming" },
-  { id: "r16_4", homeTeamId: "mex", awayTeamId: "eng", date: "Mon Jul 6",  venue: "Mexico City",   status: "upcoming" },
-  { id: "r16_5", homeTeamId: "por", awayTeamId: "esp", date: "Mon Jul 6",  venue: "Arlington",     status: "upcoming" },
-  { id: "r16_6", homeTeamId: "usa", awayTeamId: "bel", date: "Tue Jul 7",  venue: "Seattle",       status: "upcoming" },
-  { id: "r16_7", homeTeamId: "arg", awayTeamId: "egy", date: "Tue Jul 7",  venue: "Atlanta",       status: "upcoming" },
-  { id: "r16_8", homeTeamId: "sui", awayTeamId: "col", date: "Tue Jul 7",  venue: "Vancouver",     status: "upcoming" },
+  { id: "r16_1", homeTeamId: "can", awayTeamId: "mar", date: "Sat Jul 4",  venue: "Houston",       homeScore: 0, awayScore: 3, winner: "mar", status: "completed" },
+  { id: "r16_2", homeTeamId: "par", awayTeamId: "fra", date: "Sat Jul 4",  venue: "Philadelphia",  homeScore: 0, awayScore: 1, winner: "fra", status: "completed" },
+  { id: "r16_3", homeTeamId: "bra", awayTeamId: "nor", date: "Sun Jul 5",  venue: "New Jersey",    homeScore: 1, awayScore: 2, winner: "nor", status: "completed" },
+  { id: "r16_4", homeTeamId: "mex", awayTeamId: "eng", date: "Sun Jul 5",  venue: "Mexico City",   homeScore: 2, awayScore: 3, winner: "eng", status: "completed" },
+  { id: "r16_5", homeTeamId: "por", awayTeamId: "esp", date: "Mon Jul 6",  venue: "Arlington",     homeScore: 0, awayScore: 1, winner: "esp", status: "completed" },
+  { id: "r16_6", homeTeamId: "usa", awayTeamId: "bel", date: "Mon Jul 6",  venue: "Seattle",       homeScore: 1, awayScore: 4, winner: "bel", status: "completed" },
+  { id: "r16_7", homeTeamId: "arg", awayTeamId: "egy", date: "Tue Jul 7",  venue: "Atlanta",       homeScore: 3, awayScore: 2, winner: "arg", status: "completed" },
+  { id: "r16_8", homeTeamId: "sui", awayTeamId: "col", date: "Tue Jul 7",  venue: "Vancouver",     homeScore: 0, awayScore: 0, pens: "4-3", winner: "sui", status: "completed" },
 ];
+
+// Quarter-final matches
+export type QFMatch = {
+  id: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  date: string;
+  venue: string;
+  homeScore?: number;
+  awayScore?: number;
+  pens?: string;
+  winner?: string;
+  status: "completed" | "live" | "upcoming";
+};
+
+export const QF_MATCHES: QFMatch[] = [
+  { id: "qf_1", homeTeamId: "fra", awayTeamId: "mar", date: "Wed Jul 9",  venue: "Boston",      homeScore: 2, awayScore: 0, winner: "fra", status: "completed" },
+  { id: "qf_2", homeTeamId: "esp", awayTeamId: "bel", date: "Thu Jul 10", venue: "Los Angeles", homeScore: 2, awayScore: 1, winner: "esp", status: "completed" },
+  { id: "qf_3", homeTeamId: "nor", awayTeamId: "eng", date: "Fri Jul 11", venue: "Miami",       homeScore: 1, awayScore: 2, winner: "eng", status: "completed" }, // AET
+  { id: "qf_4", homeTeamId: "arg", awayTeamId: "sui", date: "Fri Jul 11", venue: "Kansas City", homeScore: 3, awayScore: 1, winner: "arg", status: "completed" }, // AET
+];
+
+// Semi-final matches
+export type SFMatch = {
+  id: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  date: string;
+  venue: string;
+  homeScore?: number;
+  awayScore?: number;
+  pens?: string;
+  winner?: string;
+  status: "completed" | "live" | "upcoming";
+};
+
+export const SF_MATCHES: SFMatch[] = [
+  { id: "sf_1", homeTeamId: "fra", awayTeamId: "esp", date: "Tue Jul 14", venue: "Arlington", homeScore: 0, awayScore: 2, winner: "esp", status: "completed" },
+  { id: "sf_2", homeTeamId: "eng", awayTeamId: "arg", date: "Wed Jul 15", venue: "Atlanta",   homeScore: 1, awayScore: 2, winner: "arg", status: "completed" },
+];
+
+// Third place match
+export type ThirdPlaceMatch = {
+  id: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  date: string;
+  venue: string;
+  homeScore?: number;
+  awayScore?: number;
+  winner?: string;
+  status: "completed" | "live" | "upcoming";
+};
+
+export const THIRD_PLACE_MATCH: ThirdPlaceMatch = {
+  id: "third", homeTeamId: "fra", awayTeamId: "eng", date: "Sat Jul 18", venue: "Miami", homeScore: 4, awayScore: 6, winner: "eng", status: "completed"
+};
+
+// Final match
+export type FinalMatch = {
+  id: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  date: string;
+  venue: string;
+  homeScore?: number;
+  awayScore?: number;
+  pens?: string;
+  winner?: string;
+  status: "completed" | "live" | "upcoming";
+};
+
+export const FINAL_MATCH: FinalMatch = {
+  id: "final", homeTeamId: "esp", awayTeamId: "arg", date: "Sun Jul 19", venue: "New Jersey", homeScore: 1, awayScore: 0, winner: "esp", status: "completed" // AET
+};
 
 // Legacy flat match list used by predict page (group stage only)
 export const GROUP_MATCHES: Match[] = GROUPS.flatMap((grp) => {

@@ -2,7 +2,7 @@
 // Sync tournament data with Football Data.org API for real-time updates
 
 import { FootballDataMatch } from './football-data-api';
-import { R32_MATCHES, R16_MATCHES, R16Match } from './tournament-data';
+import { R32_MATCHES, R16_MATCHES, R16Match, QF_MATCHES, SF_MATCHES, THIRD_PLACE_MATCH, FINAL_MATCH } from './tournament-data';
 import { TEAMS, getTeamByName } from './tournament-data';
 
 export interface GoalEvent {
@@ -41,27 +41,104 @@ export interface TournamentMatch {
 // Primary source is OpenFootball API (lib/openfootball-api.ts)
 const MATCH_GOALS: Record<string, GoalEvent[]> = {
   // R32 matches
-  'r32_7': [ // Mexico 2-0 Ecuador (Tue Jun 30)
+  'r32_7': [ // Mexico 2-0 Ecuador
     { scorer: 'Julián Quiñones', minute: '31', team: 'home' },
     { scorer: 'Raúl Jiménez', minute: '45+1', team: 'home' },
   ],
-  'r32_13': [ // Switzerland 2-0 Algeria (Thu Jul 2)
+  'r32_13': [ // Switzerland 2-0 Algeria
     { scorer: 'Breel Embolo', minute: '10', team: 'home' },
     { scorer: 'Dan Ndoye', minute: '46', team: 'home' },
   ],
-  'r32_16': [ // Colombia 1-0 Ghana (Fri Jul 3)
+  'r32_16': [ // Colombia 1-0 Ghana
     { scorer: 'Jhon Arias', minute: '14', team: 'home' },
   ],
   // R16 matches
-  'r16_1': [ // Canada 0-4 Morocco (Sat Jul 5)
-    { scorer: 'Hakimi', minute: '12', team: 'away' },
-    { scorer: 'En-Nesyri', minute: '34', team: 'away' },
-    { scorer: 'Ziyech', minute: '56', team: 'away' },
-    { scorer: 'Diaz', minute: '78', team: 'away' },
+  'r16_1': [ // Canada 0-3 Morocco
+    { scorer: 'Azzedine Ounahi', minute: '50', team: 'away' },
+    { scorer: 'Azzedine Ounahi', minute: '82', team: 'away' },
+    { scorer: 'Soufiane Rahimi', minute: '90+8', team: 'away' },
   ],
-  'r16_2': [ // Paraguay 1-1 France (Sat Jul 5) - Paraguay wins on penalties
-    { scorer: 'Almirón', minute: '23', team: 'home' },
-    { scorer: 'Mbappé', minute: '67', team: 'away' },
+  'r16_2': [ // Paraguay 0-1 France
+    { scorer: 'Kylian Mbappé', minute: '70', team: 'away', penalty: true },
+  ],
+  'r16_3': [ // Brazil 1-2 Norway
+    { scorer: 'Neymar', minute: '90+10', team: 'home', penalty: true },
+    { scorer: 'Erling Haaland', minute: '79', team: 'away' },
+    { scorer: 'Erling Haaland', minute: '90', team: 'away' },
+  ],
+  'r16_4': [ // Mexico 2-3 England
+    { scorer: 'Julián Quiñones', minute: '42', team: 'home' },
+    { scorer: 'Raúl Jiménez', minute: '69', team: 'home', penalty: true },
+    { scorer: 'Jude Bellingham', minute: '36', team: 'away' },
+    { scorer: 'Jude Bellingham', minute: '38', team: 'away' },
+    { scorer: 'Harry Kane', minute: '60', team: 'away', penalty: true },
+  ],
+  'r16_5': [ // Portugal 0-1 Spain
+    { scorer: 'Mikel Merino', minute: '90+1', team: 'away' },
+  ],
+  'r16_6': [ // USA 1-4 Belgium
+    { scorer: 'Malik Tillman', minute: '31', team: 'home' },
+    { scorer: 'Charles De Ketelaere', minute: '9', team: 'away' },
+    { scorer: 'Charles De Ketelaere', minute: '33', team: 'away' },
+    { scorer: 'Hans Vanaken', minute: '57', team: 'away' },
+    { scorer: 'Romelu Lukaku', minute: '90+3', team: 'away' },
+  ],
+  'r16_7': [ // Argentina 3-2 Egypt
+    { scorer: 'Cristian Romero', minute: '79', team: 'home' },
+    { scorer: 'Lionel Messi', minute: '83', team: 'home' },
+    { scorer: 'Enzo Fernández', minute: '90+2', team: 'home' },
+    { scorer: 'Yasser Ibrahim', minute: '15', team: 'away' },
+    { scorer: 'Mostafa Zico', minute: '67', team: 'away' },
+  ],
+  'r16_8': [ // Switzerland 0-0 Colombia (4-3 pens) - no goals in regulation
+  ],
+  // QF matches
+  'qf_1': [ // France 2-0 Morocco
+    { scorer: 'Kylian Mbappé', minute: '60', team: 'home' },
+    { scorer: 'Ousmane Dembélé', minute: '66', team: 'home' },
+  ],
+  'qf_2': [ // Spain 2-1 Belgium
+    { scorer: 'Fabián Ruiz', minute: '30', team: 'home' },
+    { scorer: 'Mikel Merino', minute: '88', team: 'home' },
+    { scorer: 'Charles De Ketelaere', minute: '41', team: 'away' },
+  ],
+  'qf_3': [ // Norway 1-2 England (AET)
+    { scorer: 'Andreas Schjelderup', minute: '36', team: 'home' },
+    { scorer: 'Jude Bellingham', minute: '45+2', team: 'away' },
+    { scorer: 'Jude Bellingham', minute: '93', team: 'away' },
+  ],
+  'qf_4': [ // Argentina 3-1 Switzerland (AET)
+    { scorer: 'Alexis Mac Allister', minute: '10', team: 'home' },
+    { scorer: 'Julián Álvarez', minute: '112', team: 'home' },
+    { scorer: 'Lautaro Martínez', minute: '120+1', team: 'home' },
+    { scorer: 'Dan Ndoye', minute: '67', team: 'away' },
+  ],
+  // SF matches
+  'sf_1': [ // France 0-2 Spain
+    { scorer: 'Mikel Oyarzabal', minute: '22', team: 'away', penalty: true },
+    { scorer: 'Pedro Porro', minute: '58', team: 'away' },
+  ],
+  'sf_2': [ // England 1-2 Argentina
+    { scorer: 'Anthony Gordon', minute: '55', team: 'home' },
+    { scorer: 'Enzo Fernández', minute: '86', team: 'away' },
+    { scorer: 'Lautaro Martínez', minute: '92', team: 'away' },
+  ],
+  // Third place match
+  'third': [ // France 4-6 England
+    { scorer: 'Kylian Mbappé', minute: '48', team: 'home' },
+    { scorer: 'Bradley Barcola', minute: '54', team: 'home' },
+    { scorer: 'Kylian Mbappé', minute: '66', team: 'home' },
+    { scorer: 'Ousmane Dembélé', minute: '90+6', team: 'home' },
+    { scorer: 'Declan Rice', minute: '3', team: 'away' },
+    { scorer: 'Ezri Konsa', minute: '18', team: 'away' },
+    { scorer: 'Bukayo Saka', minute: '37', team: 'away' },
+    { scorer: 'Harry Kane', minute: '45+1', team: 'away' },
+    { scorer: 'Jude Bellingham', minute: '72', team: 'away' },
+    { scorer: 'Harry Kane', minute: '85', team: 'away' },
+  ],
+  // Final
+  'final': [ // Spain 1-0 Argentina (AET)
+    { scorer: 'Ferran Torres', minute: '106', team: 'home' },
   ],
 };
 
@@ -289,6 +366,14 @@ export function syncR16MatchWithFootballData(match: R16Match, footballMatches: F
   };
 }
 
+// Helper to convert static match data to TournamentMatch format
+function staticMatchToTournamentMatch(match: { id: string; homeTeamId: string; awayTeamId: string; date: string; venue: string; homeScore?: number; awayScore?: number; pens?: string; winner?: string; status: "completed" | "live" | "upcoming" }): TournamentMatch {
+  return {
+    ...match,
+    goals: MATCH_GOALS[match.id],
+  };
+}
+
 // Sync all tournament rounds with Football Data
 export function syncTournamentWithFootballData(footballMatches: FootballDataMatch[]) {
   // Sync R32 matches with our static data
@@ -297,12 +382,22 @@ export function syncTournamentWithFootballData(footballMatches: FootballDataMatc
   // Sync R16 matches with our static data
   const syncedR16 = R16_MATCHES.map(match => syncR16MatchWithFootballData(match, footballMatches));
   
+  // QF, SF, Third Place, and Final are already completed - use static data
+  const syncedQF = QF_MATCHES.map(match => staticMatchToTournamentMatch(match));
+  const syncedSF = SF_MATCHES.map(match => staticMatchToTournamentMatch(match));
+  const syncedThird = staticMatchToTournamentMatch(THIRD_PLACE_MATCH);
+  const syncedFinal = staticMatchToTournamentMatch(FINAL_MATCH);
+  
   // Combine all matches
-  const allMatches = [...syncedR32, ...syncedR16];
+  const allMatches = [...syncedR32, ...syncedR16, ...syncedQF, ...syncedSF, syncedThird, syncedFinal];
   
   return {
     r32: syncedR32,
     r16: syncedR16,
+    qf: syncedQF,
+    sf: syncedSF,
+    third: syncedThird,
+    final: syncedFinal,
     all: allMatches,
   };
 }
