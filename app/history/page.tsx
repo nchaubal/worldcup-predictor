@@ -78,7 +78,7 @@ export default function HistoryPage() {
       {/* Stats summary */}
       <Card className="mb-6 border-border/50">
         <CardContent className="py-4">
-          <div className="grid grid-cols-4 gap-4 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
             <div>
               <div className="text-2xl font-black text-primary">{getTotalPoints()}</div>
               <div className="text-xs text-muted-foreground">Total Points</div>
@@ -151,19 +151,19 @@ export default function HistoryPage() {
                   </div>
 
                   {/* Actual result */}
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={cn("flex-1 flex items-center gap-2", !homeWon && "opacity-50")}>
-                      <span className="text-xl">{homeTeam.flag}</span>
-                      <span className={cn("font-semibold text-sm truncate", homeWon && "text-primary")}>{homeTeam.name}</span>
+                  <div className="flex items-center gap-1.5 sm:gap-3 mb-3">
+                    <div className={cn("flex-1 flex items-center gap-1.5 sm:gap-2 min-w-0", !homeWon && "opacity-50")}>
+                      <span className="text-lg sm:text-xl shrink-0">{homeTeam.flag}</span>
+                      <span className={cn("font-semibold text-xs sm:text-sm truncate", homeWon && "text-primary")}>{homeTeam.name}</span>
                     </div>
-                    <div className="font-black text-lg">
+                    <div className="font-black text-base sm:text-lg shrink-0">
                       <span className={homeWon ? "text-primary" : ""}>{m.homeScore}</span>
-                      <span className="text-muted-foreground mx-2">–</span>
+                      <span className="text-muted-foreground mx-1.5 sm:mx-2">–</span>
                       <span className={awayWon ? "text-primary" : ""}>{m.awayScore}</span>
                     </div>
-                    <div className={cn("flex-1 flex items-center justify-end gap-2", !awayWon && "opacity-50")}>
-                      <span className={cn("font-semibold text-sm truncate", awayWon && "text-primary")}>{awayTeam.name}</span>
-                      <span className="text-xl">{awayTeam.flag}</span>
+                    <div className={cn("flex-1 flex items-center justify-end gap-1.5 sm:gap-2 min-w-0", !awayWon && "opacity-50")}>
+                      <span className={cn("font-semibold text-xs sm:text-sm truncate", awayWon && "text-primary")}>{awayTeam.name}</span>
+                      <span className="text-lg sm:text-xl shrink-0">{awayTeam.flag}</span>
                     </div>
                   </div>
 

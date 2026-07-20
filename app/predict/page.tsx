@@ -165,40 +165,40 @@ export default function PredictPage() {
           </div>
 
           {/* Teams and scores */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Home team */}
-            <div className={cn("flex-1 flex items-center gap-2", isCompleted && !homeWon && "opacity-50")}>
-              <span className="text-2xl">{homeTeam.flag}</span>
-              <span className={cn("font-semibold text-sm truncate", homeWon && "text-primary")}>{homeTeam.name}</span>
+            <div className={cn("flex-1 flex items-center gap-1.5 sm:gap-2 min-w-0", isCompleted && !homeWon && "opacity-50")}>
+              <span className="text-xl sm:text-2xl shrink-0">{homeTeam.flag}</span>
+              <span className={cn("font-semibold text-xs sm:text-sm truncate", homeWon && "text-primary")}>{homeTeam.name}</span>
             </div>
 
             {/* Score display */}
             <div className="shrink-0 flex items-center gap-2">
               {isCompleted || isLive ? (
                 <div className="text-center">
-                  <div className="font-black text-xl">
+                  <div className="font-black text-lg sm:text-xl">
                     <span className={homeWon ? "text-primary" : ""}>{m.homeScore}</span>
-                    <span className="text-muted-foreground mx-2">–</span>
+                    <span className="text-muted-foreground mx-1.5 sm:mx-2">–</span>
                     <span className={awayWon ? "text-primary" : ""}>{m.awayScore}</span>
                   </div>
                   {isLive && <div className="text-[10px] text-red-400 animate-pulse">LIVE</div>}
                 </div>
               ) : userPrediction ? (
                 <div className="text-center">
-                  <div className="font-bold text-lg text-primary">
+                  <div className="font-bold text-base sm:text-lg text-primary">
                     {userPrediction.homeScore} – {userPrediction.awayScore}
                   </div>
                   <div className="text-[10px] text-muted-foreground">Your prediction</div>
                 </div>
               ) : (
-                <span className="text-muted-foreground font-bold text-lg">vs</span>
+                <span className="text-muted-foreground font-bold text-base sm:text-lg">vs</span>
               )}
             </div>
 
             {/* Away team */}
-            <div className={cn("flex-1 flex items-center justify-end gap-2", isCompleted && !awayWon && "opacity-50")}>
-              <span className={cn("font-semibold text-sm truncate", awayWon && "text-primary")}>{awayTeam.name}</span>
-              <span className="text-2xl">{awayTeam.flag}</span>
+            <div className={cn("flex-1 flex items-center justify-end gap-1.5 sm:gap-2 min-w-0", isCompleted && !awayWon && "opacity-50")}>
+              <span className={cn("font-semibold text-xs sm:text-sm truncate", awayWon && "text-primary")}>{awayTeam.name}</span>
+              <span className="text-xl sm:text-2xl shrink-0">{awayTeam.flag}</span>
             </div>
           </div>
 

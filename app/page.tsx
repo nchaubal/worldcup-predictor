@@ -205,29 +205,29 @@ export default function HomePage() {
             )}
           </div>
           <div 
-            className={cn("flex items-center gap-2", isCompleted && hasGoals && "cursor-pointer")}
+            className={cn("flex items-center gap-1.5 sm:gap-2", isCompleted && hasGoals && "cursor-pointer")}
             onClick={isCompleted && hasGoals ? () => toggleMatchExpanded(m.id) : undefined}
           >
-            <div className={cn("flex-1 flex items-center gap-2", isCompleted && !homeWon && "opacity-40")}>
-              <span className="text-xl">{homeTeam.flag}</span>
-              <span className={cn("text-sm font-semibold truncate", homeWon && "text-primary")}>{homeTeam.name}</span>
+            <div className={cn("flex-1 flex items-center gap-1.5 sm:gap-2 min-w-0", isCompleted && !homeWon && "opacity-40")}>
+              <span className="text-lg sm:text-xl shrink-0">{homeTeam.flag}</span>
+              <span className={cn("text-xs sm:text-sm font-semibold truncate", homeWon && "text-primary")}>{homeTeam.name}</span>
             </div>
-            <div className="shrink-0 text-center min-w-[3.5rem]">
+            <div className="shrink-0 text-center min-w-[3rem] sm:min-w-[3.5rem]">
               {isCompleted || isLive ? (
-                <div className="font-black text-base">
+                <div className="font-black text-sm sm:text-base">
                   <span className={homeWon ? "text-primary" : ""}>{m.homeScore}</span>
                   <span className="text-muted-foreground mx-1">–</span>
                   <span className={awayWon ? "text-primary" : ""}>{m.awayScore}</span>
                 </div>
               ) : (
-                <span className="text-muted-foreground text-sm font-bold">vs</span>
+                <span className="text-muted-foreground text-xs sm:text-sm font-bold">vs</span>
               )}
               {m.pens && <div className="text-[10px] text-muted-foreground">pens {m.pens}</div>}
               {isLive && <div className="text-[10px] text-red-400 animate-pulse">LIVE</div>}
             </div>
-            <div className={cn("flex-1 flex items-center justify-end gap-2", isCompleted && !awayWon && "opacity-40")}>
-              <span className={cn("text-sm font-semibold truncate", awayWon && "text-primary")}>{awayTeam.name}</span>
-              <span className="text-xl">{awayTeam.flag}</span>
+            <div className={cn("flex-1 flex items-center justify-end gap-1.5 sm:gap-2 min-w-0", isCompleted && !awayWon && "opacity-40")}>
+              <span className={cn("text-xs sm:text-sm font-semibold truncate", awayWon && "text-primary")}>{awayTeam.name}</span>
+              <span className="text-lg sm:text-xl shrink-0">{awayTeam.flag}</span>
             </div>
             {/* Expand indicator for completed matches with goals */}
             {isCompleted && hasGoals && (

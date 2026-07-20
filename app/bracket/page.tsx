@@ -575,42 +575,43 @@ export default function BracketPage() {
     <div className="px-4 py-4 sm:px-6 lg:px-8 min-h-screen" ref={outerRef}>
 
       {/* Header */}
-      <div className="mx-auto max-w-7xl mb-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto max-w-7xl mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center shrink-0">
             <GitBranch className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Knockout Bracket</h1>
-            <p className="text-muted-foreground text-xs mt-0.5">Click any team to pick · undo last prediction · hover to magnify</p>
+            <h1 className="text-lg sm:text-xl font-bold">Knockout Bracket</h1>
+            <p className="text-muted-foreground text-[10px] sm:text-xs mt-0.5 hidden sm:block">Click any team to pick · undo last prediction · hover to magnify</p>
+            <p className="text-muted-foreground text-[10px] sm:hidden mt-0.5">Tap to pick · swipe to scroll</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handleRefresh}
             disabled={dataLoading}
-            className="flex items-center gap-1.5 bg-muted/50 hover:bg-muted/70 border border-border/50 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 bg-muted/50 hover:bg-muted/70 border border-border/50 rounded-lg px-2.5 sm:px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             title={`Refresh live data (last: ${lastRefresh.toLocaleTimeString()})`}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${dataLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </button>
           {history.length > 0 && (
             <button
               onClick={handleUndo}
-              className="flex items-center gap-1.5 bg-muted/50 hover:bg-muted/70 border border-border/50 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 bg-muted/50 hover:bg-muted/70 border border-border/50 rounded-lg px-2.5 sm:px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
               title="Undo last prediction"
             >
               <Undo className="h-3.5 w-3.5" />
-              Undo
+              <span className="hidden sm:inline">Undo</span>
             </button>
           )}
           {pickedCount > 0 && <Badge variant="secondary" className="text-xs">{pickedCount} picks</Badge>}
           {champion && (
-            <div className="flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-xl px-3 py-1.5">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-primary/10 border border-primary/30 rounded-xl px-2 sm:px-3 py-1.5">
               <Trophy className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-xs text-muted-foreground uppercase tracking-wide">Champion</span>
-              <span className="font-black text-sm ml-1">{champion.flag} {champion.name}</span>
+              <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide hidden sm:inline">Champion</span>
+              <span className="font-black text-xs sm:text-sm">{champion.flag} {champion.name}</span>
             </div>
           )}
         </div>
