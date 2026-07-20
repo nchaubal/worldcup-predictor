@@ -471,38 +471,65 @@ export default function BracketPage() {
     };
   });
 
-  // QF pairings based on official bracket:
-  // First half:
-  //   qf_1: r16_1 vs r16_2 (Canada/Morocco vs France/Paraguay)
-  //   qf_2: r16_6 vs r16_5 (USA/Belgium vs Portugal/Spain)
-  // Second half:
-  //   qf_3: r16_3 vs r16_4 (Brazil/Norway vs Mexico/England)
-  //   qf_4: r16_8 vs r16_7 (Switzerland/Colombia vs Argentina/Australia)
-  const qf: MatchDef[] = [
-    { id: "qf_1", teamAId: r16W("r16_1"), teamBId: r16W("r16_2"), winnerId: picks["qf_1"] ?? null },
-    { id: "qf_2", teamAId: r16W("r16_6"), teamBId: r16W("r16_5"), winnerId: picks["qf_2"] ?? null },
-    { id: "qf_3", teamAId: r16W("r16_3"), teamBId: r16W("r16_4"), winnerId: picks["qf_3"] ?? null },
-    { id: "qf_4", teamAId: r16W("r16_8"), teamBId: r16W("r16_7"), winnerId: picks["qf_4"] ?? null },
-  ];
-
-  // SF pairings:
-  //   sf_1: qf_1 vs qf_2 (First half: France/Spain potential)
-  //   sf_2: qf_3 vs qf_4 (Second half: Brazil/Argentina potential)
-  const sf: MatchDef[] = [
-    { id: "sf_1", teamAId: picks["qf_1"] ?? null, teamBId: picks["qf_2"] ?? null, winnerId: picks["sf_1"] ?? null },
-    { id: "sf_2", teamAId: picks["qf_3"] ?? null, teamBId: picks["qf_4"] ?? null, winnerId: picks["sf_2"] ?? null },
-  ];
-
-  // Final
-  const finalMatch: MatchDef = {
-    id: "final",
-    teamAId: picks["sf_1"] ?? null,
-    teamBId: picks["sf_2"] ?? null,
-    winnerId: picks["final"] ?? null,
-    venue: "MetLife Stadium",
+  // QF winner helper with dynamic sync
+  const qfW = (matchId: string): string | null => {
+    const syncedTournament = syncTournamentWithFootballData(footballMatches);
+    const syncedMatch = syncedTournament.qf.find(m => m.id === matchId);
+    return syncedMatch?.winner ?? picks[matchId] ?? null;
   };
 
-  const champion    = picks["final"] ? TEAMS.find(t => t.id === picks["final"]) : null;
+  // SF winner helper with dynamic sync
+  const sfW = (matchId: string): string | null => {
+    const syncedTournament = syncTournamentWithFootballData(footballMatches);
+    const syncedMatch = syncedTournament.sf.find(m => m.id === matchId);
+    return syncedMatch?.winner ?? picks[matchId] ?? null;
+  };
+
+  // QF pairings based on official bracket:
+  // First half:
+  //   qf_1: r16_1 vs r16_2 (Canada/Morocco vs France/Paraguay) → France vs Morocco
+  //   qf_2: r16_6 vs r16_5 (USA/Belgium vs Portugal/Spain) → Belgium vs Spain
+  // Second half:
+  //   qf_3: r16_3 vs r16_4 (Brazil/Norway vs Mexico/England) → Norway vs England
+  //   qf_4: r16_8 vs r16_7 (Switzerland/Colombia vs Argentina/Egypt) → Switzerland vs Argentina
+  const qf: MatchDef[] = (() => {
+    const syncedTournament = syncTournamentWithFootballData(footballMatches);
+    return [
+      { id: "qf_1", teamAId: r16W("r16_2"), teamBId: r16W("r16_1"), winnerId: syncedTournament.qf.find(m => m.id === "qf_1")?.winner ?? picks["qf_1"] ?? null, scoreA: syncedTournament.qf.find(m => m.id === "qf_1")?.homeScore, scoreB: syncedTournament.qf.find(m => m.id === "qf_1")?.awayScore, status: syncedTournament.qf.find(m => m.id === "qf_1")?.status },
+      { id: "qf_2", teamAId: r16W("r16_5"), teamBId: r16W("r16_6"), winnerId: syncedTournament.qf.find(m => m.id === "qf_2")?.winner ?? picks["qf_2"] ?? null, scoreA: syncedTournament.qf.find(m => m.id === "qf_2")?.homeScore, scoreB: syncedTournament.qf.find(m => m.id === "qf_2")?.awayScore, status: syncedTournament.qf.find(m => m.id === "qf_2")?.status },
+      { id: "qf_3", teamAId: r16W("r16_3"), teamBId: r16W("r16_4"), winnerId: syncedTournament.qf.find(m => m.id === "qf_3")?.winner ?? picks["qf_3"] ?? null, scoreA: syncedTournament.qf.find(m => m.id === "qf_3")?.homeScore, scoreB: syncedTournament.qf.find(m => m.id === "qf_3")?.awayScore, status: syncedTournament.qf.find(m => m.id === "qf_3")?.status },
+      { id: "qf_4", teamAId: r16W("r16_7"), teamBId: r16W("r16_8"), winnerId: syncedTournament.qf.find(m => m.id === "qf_4")?.winner ?? picks["qf_4"] ?? null, scoreA: syncedTournament.qf.find(m => m.id === "qf_4")?.homeScore, scoreB: syncedTournament.qf.find(m => m.id === "qf_4")?.awayScore, status: syncedTournament.qf.find(m => m.id === "qf_4")?.status },
+    ];
+  })();
+
+  // SF pairings:
+  //   sf_1: qf_1 vs qf_2 (France vs Spain)
+  //   sf_2: qf_3 vs qf_4 (England vs Argentina)
+  const sf: MatchDef[] = (() => {
+    const syncedTournament = syncTournamentWithFootballData(footballMatches);
+    return [
+      { id: "sf_1", teamAId: qfW("qf_1"), teamBId: qfW("qf_2"), winnerId: syncedTournament.sf.find(m => m.id === "sf_1")?.winner ?? picks["sf_1"] ?? null, scoreA: syncedTournament.sf.find(m => m.id === "sf_1")?.homeScore, scoreB: syncedTournament.sf.find(m => m.id === "sf_1")?.awayScore, status: syncedTournament.sf.find(m => m.id === "sf_1")?.status },
+      { id: "sf_2", teamAId: qfW("qf_3"), teamBId: qfW("qf_4"), winnerId: syncedTournament.sf.find(m => m.id === "sf_2")?.winner ?? picks["sf_2"] ?? null, scoreA: syncedTournament.sf.find(m => m.id === "sf_2")?.homeScore, scoreB: syncedTournament.sf.find(m => m.id === "sf_2")?.awayScore, status: syncedTournament.sf.find(m => m.id === "sf_2")?.status },
+    ];
+  })();
+
+  // Final
+  const finalMatch: MatchDef = (() => {
+    const syncedTournament = syncTournamentWithFootballData(footballMatches);
+    const syncedFinal = syncedTournament.final;
+    return {
+      id: "final",
+      teamAId: sfW("sf_1"),
+      teamBId: sfW("sf_2"),
+      winnerId: syncedFinal?.winner ?? picks["final"] ?? null,
+      scoreA: syncedFinal?.homeScore,
+      scoreB: syncedFinal?.awayScore,
+      status: syncedFinal?.status,
+      venue: "MetLife Stadium",
+    };
+  })();
+
+  const champion    = finalMatch.winnerId ? TEAMS.find(t => t.id === finalMatch.winnerId) : null;
   const pickedCount = Object.keys(picks).length;
 
   // R32 display order: reordered so each consecutive pair feeds its R16 match,
